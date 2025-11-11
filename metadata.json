@@ -1,0 +1,7 @@
+{
+  "name": "Mobile Shop",
+  "description": "A modern e-commerce storefront for selling mobile phones online, complete with a shopping cart, wishlist, and a beautiful product gallery.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
