@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com http://localhost:3001; script-src 'self' https://www.googletagmanager.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://aistudiocdn.com 'sha256-jrTtmhRGtx17s56BYxPxwVzcU26+ciEWZGwrePjXuHM=' 'sha256-yEl32jUVAa1f73t2eBga+2G9h26lHi32G9aQAI4T/CU=' 'sha256-liS8P/W4KWukNvw3FVwjiv3TIFBzoah/NECeakQu4JQ='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; object-src 'none'; frame-src https://maps.google.com/ https://www.google.com/ https://www.googletagmanager.com/; upgrade-insecure-requests;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com http://localhost:3001 https://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://storage.googleapis.com https://firebaseinstallations.googleapis.com https://firebase.googleapis.com https://*.google-analytics.com https://www.google-analytics.com; script-src 'self' https://www.googletagmanager.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://aistudiocdn.com https://www.gstatic.com https://apis.google.com https://www.google.com 'sha256-jrTtmhRGtx17s56BYxPxwVzcU26+ciEWZGwrePjXuHM=' 'sha256-yEl32jUVAa1f73t2eBga+2G9h26lHi32G9aQAI4T/CU=' 'sha256-liS8P/W4KWukNvw3FVwjiv3TIFBzoah/NECeakQu4JQ='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; object-src 'none'; frame-src https://maps.google.com/ https://www.google.com/ https://www.googletagmanager.com/ https://*.firebaseapp.com; upgrade-insecure-requests;">
     <meta name="description" content="DEV MOBILE - Your one-stop shop for the latest smartphones, smartwatches, and accessories. Get the best deals on top brands like Apple, Samsung, Google, and more.">
     <meta name="keywords" content="smartphones, mobile phones, apple, samsung, google pixel, smartwatches, accessories, electronics">
     <title>Dev Mobile</title>
@@ -30,7 +30,13 @@
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
     "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0"
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0",
+    "firebase/compat/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js",
+    "firebase/compat/auth": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js",
+    "firebase/compat/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js",
+    "firebase/compat/storage": "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js",
+    "firebase/compat/analytics": "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.5.0/"
   }
 }
 </script>
