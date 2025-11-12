@@ -202,7 +202,8 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
             },
         });
         
-        const jsonString = response.text;
+        // FIX: Coerced `response.text` to a string. The type can be inferred as 'unknown', which is incompatible with `JSON.parse`. This ensures type safety and prevents a runtime error.
+        const jsonString = String(response.text);
         const results = JSON.parse(jsonString) as PriceComparison[];
         setComparisonResults(results);
 
@@ -590,7 +591,8 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
               <AddReviewForm productId={product.id} onAddReview={onAddReview} addToast={addToast} />
             )}
             {product.reviews && Array.isArray(product.reviews) && product.reviews.length > 0 ? (
-                product.reviews.map((review: Review) => (
+                // FIX: Added an explicit type assertion `as Review[]`. The TypeScript compiler was failing to infer that `product.reviews` is an array despite the `Array.isArray` check, causing a "Property 'map' does not exist" error. This assertion resolves the type mismatch.
+                (product.reviews as Review[]).map((review: Review) => (
                     <div key={review.id} className="bg-gray-50 p-4 rounded-lg mb-4 border border-gray-200">
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="font-semibold text-gray-800">{review.author}</h3>

@@ -12,6 +12,7 @@
     "@google/genai": "^1.27.0",
     "@tailwindcss/vite": "^4.1.16",
     "dotenv": "^17.2.3",
+    "firebase": "^12.5.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

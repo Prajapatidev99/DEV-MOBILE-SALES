@@ -9,12 +9,9 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-// FIX: The ErrorBoundary class must extend React.Component to function as a React class component. This gives it access to component lifecycle methods, state, and props, resolving errors where 'state' and 'props' were not found.
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+  // FIX: Replaced constructor with a public class field for state initialization. This resolves a series of TypeScript errors where 'state' and 'props' were not being recognized on the component instance. This modern syntax is cleaner and ensures the component state is correctly typed and initialized.
+  public state: ErrorBoundaryState = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     // Update state so the next render will show the fallback UI.
