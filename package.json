@@ -11,8 +11,15 @@
   "dependencies": {
     "@google/genai": "^1.27.0",
     "@tailwindcss/vite": "^4.1.16",
+    "cloudinary": "^2.8.0",
     "dotenv": "^17.2.3",
+    "express-session": "^1.18.2",
     "firebase": "^12.5.0",
+    "framer-motion": "^12.23.24",
+    "lucide-react": "^0.553.0",
+    "multer": "^2.0.2",
+    "passport": "^0.7.0",
+    "passport-facebook": "^3.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

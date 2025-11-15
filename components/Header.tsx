@@ -29,6 +29,7 @@ interface HeaderProps {
 const categoryLinks = [
     { name: "Smartphones", href: "#/shop/Smartphones"},
     { name: "Smartwatches", href: "#/shop/Smartwatches"},
+    { name: "Refurbished Phones", href: "#/shop/Refurbished Phones"},
     { 
         name: "Accessories", 
         href: "#/shop/Accessories",

@@ -23,10 +23,15 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({ products, onToggleLik
             className="animate-fade-in-up"
             style={{ animationDelay: `${index * 150}ms` }}
           >
+            {/* FIX: Pass down additional props to enable notify and compare functionality on related product cards. */}
             <ProductCard 
               product={product}
               onToggleLike={onToggleLike}
               likedItems={likedItems}
+              onNotifyMe={onNotifyMe}
+              notificationList={notificationList}
+              compareList={compareList}
+              onToggleCompare={onToggleCompare}
             />
           </div>
         ))}

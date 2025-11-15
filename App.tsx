@@ -1,6 +1,5 @@
 // FIX: Corrected the import order. The React module must be imported before any files that might augment its types, such as './types.ts'. The previous order was causing a race condition during module initialization, preventing React's JSX types from being correctly recognized and causing the application to fail during render.
 import * as React from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
 import * as api from './api';
 
 import type { Product, CartItem, User, Order, Review, Store, ChatMessage, Notification, ProductCategory, ProductVariant, DisplayableProduct, HomepageConfig, Coupon, Payout } from './types';
@@ -45,6 +44,7 @@ import TrackOrderPage from './components/TrackOrderPage';
 import InvoicePage from './components/InvoicePage';
 import CustomPaymentPage from './components/CustomPaymentPage';
 import SellerPage from './components/SellerPage';
+import { getCloudinaryUrl } from './components/ImageResolver';
 
 
 const PRODUCTS_PER_PAGE = 12;
@@ -209,11 +209,12 @@ const App: React.FC = () => {
     return approvedProducts.flatMap(product =>
         (product.variants || []).map(variant => {
             const variantAttributes = Object.values(variant.attributes).filter(Boolean).join(', ');
+            const imagePublicId = variant.imagePublicId || (product.imagePublicIds && product.imagePublicIds.length > 0 ? product.imagePublicIds[0] : '');
             return {
                 uniqueId: `${product.id}-${variant.id}`,
                 parentId: product.id,
                 name: variantAttributes ? `${product.name} (${variantAttributes})` : product.name,
-                imageUrl: variant.imageUrl || product.imageUrls[0] || '',
+                imagePublicId,
                 price: variant.price,
                 originalPrice: variant.originalPrice,
                 rating: product.rating,
@@ -411,7 +412,39 @@ const App: React.FC = () => {
 
   // AI Recommendations
   const fetchRecommendations = React.useCallback(async () => {
-      // ... same as before
+    setIsRecommendationsLoading(true);
+    try {
+        const viewedProducts = recentlyViewedIds.map(id => products.find(p => p.id === id)?.name).filter(Boolean);
+        const likedProducts = likedItems.map(id => products.find(p => p.id === id)?.name).filter(Boolean);
+        const allProductNames = products.map(p => p.name).join(', ');
+
+        let prompt = `Based on the following products, recommend 3 similar products from the available list.
+        Available products: ${allProductNames}.
+        `;
+        if (viewedProducts.length > 0) prompt += `\nUser recently viewed: ${viewedProducts.join(', ')}.`;
+        if (likedProducts.length > 0) prompt += `\nUser has liked: ${likedProducts.join(', ')}.`;
+        prompt += `\nRespond ONLY with a JSON array of the product names, like ["Product A", "Product B", "Product C"].`;
+
+        const backendUrl = 'http://localhost:3001';
+        const response = await fetch(`${backendUrl}/api/generate-content`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt })
+        });
+        if (!response.ok) throw new Error("Failed to fetch recommendations.");
+        const data = await response.json();
+        if (data.success && data.text) {
+            const recommendedNames = JSON.parse(data.text);
+            const recs = products.filter(p => recommendedNames.includes(p.name));
+            setRecommendedProducts(recs);
+        } else {
+            throw new Error(data.message || "Invalid response from backend for recommendations.");
+        }
+    } catch (error) {
+        console.error("Failed to fetch AI recommendations:", error);
+    } finally {
+        setIsRecommendationsLoading(false);
+    }
   }, [recentlyViewedIds, likedItems, products]);
 
   React.useEffect(() => {
@@ -421,7 +454,47 @@ const App: React.FC = () => {
   }, [products, recentlyViewedIds, likedItems, fetchRecommendations]);
 
   const handleChatSubmit = React.useCallback(async (message: string) => {
-      // ... same as before
+    const newMessages: ChatMessage[] = [...chatMessages, { role: 'user', content: message }];
+    setChatMessages(newMessages);
+    setChatbotLoading(true);
+
+    try {
+        const productContext = products.slice(0, 10).map(p => {
+            const variants = p.variants || [];
+            const price = variants.length > 0 ? `from ${variants[0].price}` : 'Price not available';
+            return `${p.name} (Brand: ${p.brand}, Price: ${price})`;
+        }).join('\n');
+        const prompt = `You are a helpful and friendly mobile phone sales assistant for a store called "Dev Mobile".
+        A user is asking a question. Your knowledge is limited to the products provided below.
+        If the user asks about something you don't know, politely say you don't have information on that.
+        Keep your answers concise and friendly.
+
+        Available Products:
+        ${productContext}
+
+        User's question: "${message}"`;
+        
+        const backendUrl = 'http://localhost:3001';
+        const response = await fetch(`${backendUrl}/api/generate-content`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt })
+        });
+
+        if (!response.ok) throw new Error("Failed to get chat response.");
+        const data = await response.json();
+        if (data.success && data.text) {
+            setChatMessages([...newMessages, { role: 'model', content: data.text }]);
+        } else {
+             throw new Error(data.message || "Invalid response from backend for chat.");
+        }
+
+    } catch (error) {
+        console.error("Chatbot error:", error);
+        setChatMessages([...newMessages, { role: 'model', content: "Sorry, I'm having trouble connecting right now. Please try again later." }]);
+    } finally {
+        setChatbotLoading(false);
+    }
   }, [chatMessages, products]);
 
 
@@ -436,9 +509,11 @@ const App: React.FC = () => {
     triggerHapticFeedback();
     const targetElement = event.currentTarget as HTMLElement;
     const rect = targetElement.getBoundingClientRect();
+    
+    const imagePublicId = variant.imagePublicId || (product.imagePublicIds && product.imagePublicIds.length > 0 ? product.imagePublicIds[0] : '');
 
     setFlyingImage({
-      src: variant.imageUrl || product.imageUrls[0],
+      src: getCloudinaryUrl(imagePublicId, 200),
       top: rect.top,
       left: rect.left,
       width: rect.width,
@@ -924,7 +999,9 @@ const App: React.FC = () => {
     const handleHashChange = () => {
       window.scrollTo(0, 0);
       const hash = window.location.hash.replace('#/', '');
-      const [path, param] = hash.split('/');
+      const pathParts = hash.split('/');
+      const path = pathParts[0];
+      const param = pathParts.slice(1).join('/');
 
       if (path === 'product' && param) {
         setSelectedProductId(parseInt(param, 10));
@@ -1404,7 +1481,7 @@ const App: React.FC = () => {
       <ChatButton onClick={() => setChatOpen(prev => !prev)} />
       <Chatbot isOpen={isChatOpen} onClose={() => setChatOpen(false)} messages={chatMessages} onSubmit={handleChatSubmit} isLoading={isChatbotLoading} />
       {trackingOrder && <OrderTrackingModal order={trackingOrder} onClose={() => setTrackingOrder(null)} />}
-      {compareList.length > 0 && <CompareTray products={compareProducts} onCompare={() => setCompareModalOpen(true)} onClear={handleClearCompare} onRemove={handleToggleCompare} />}
+      {compareList.length > 0 && <CompareTray products={compareProducts} onClose={handleClearCompare} onRemove={handleToggleCompare} onCompare={() => setCompareModalOpen(true)} />}
       {isCompareModalOpen && <CompareModal products={compareProducts} onClose={() => setCompareModalOpen(false)} onAddToCart={handleAddToCart} onToggleLike={handleToggleLike} likedItems={likedItems} />}
       {showNotificationPrompt && (
           <div className="fixed bottom-6 left-6 bg-white p-4 rounded-lg shadow-lg animate-slide-in-up z-40">

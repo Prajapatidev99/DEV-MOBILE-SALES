@@ -5,17 +5,18 @@ import ImageResolver from './ImageResolver';
 
 interface HeroBannerProps {
     title: string;
-    imageUrl: string;
+    imagePublicId: string;
     onShopNowClick: () => void;
     scrollOffset: number;
     focalPoint?: FocalPoint;
 }
 
-const HeroBanner: React.FC<HeroBannerProps> = ({ title, imageUrl, onShopNowClick, scrollOffset, focalPoint = { x: 50, y: 50 } }) => {
+const HeroBanner: React.FC<HeroBannerProps> = ({ title, imagePublicId, onShopNowClick, scrollOffset, focalPoint = { x: 50, y: 50 } }) => {
     return (
         <div className="relative h-80 bg-gray-800 rounded-lg overflow-hidden mb-4 shadow-sm border border-gray-200 animate-fade-in">
             <ImageResolver 
-                src={imageUrl} 
+                publicId={imagePublicId} 
+                width={1200}
                 alt="Promotional banner" 
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{

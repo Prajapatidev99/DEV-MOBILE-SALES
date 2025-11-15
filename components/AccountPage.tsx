@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { User, Order, Address, CartItem } from '../types';
+import ImageResolver from './ImageResolver';
 
 interface AccountPageProps {
   user: User;
@@ -61,12 +62,14 @@ const ReturnRequestModal: React.FC<ReturnRequestModalProps> = ({ item, orderId, 
         onClose();
     };
 
+    const imagePublicId = item.variant.imagePublicId || (item.product.imagePublicIds && item.product.imagePublicIds.length > 0 ? item.product.imagePublicIds[0] : '');
+
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
             <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
                 <h2 className="text-xl font-bold mb-4">Request Return</h2>
                 <div className="flex items-center gap-4 mb-4 pb-4 border-b">
-                    <img src={item.variant.imageUrl || item.product.imageUrls[0]} alt={item.product.name} className="w-16 h-16 rounded-md" />
+                    <ImageResolver publicId={imagePublicId} alt={item.product.name} className="w-16 h-16 rounded-md" width={150} />
                     <div>
                         <p className="font-semibold">{item.product.name}</p>
                         <p className="text-sm text-gray-600">{Object.values(item.variant.attributes).filter(Boolean).join(' / ')}</p>
@@ -155,26 +158,29 @@ const OrderHistoryView: React.FC<{ orders: Order[], isLoading: boolean, onTrackO
                             )}
 
                             <div className="space-y-4 my-4">
-                                {order.items.map(item => (
-                                    <div key={item.variant.id} className="flex justify-between items-center text-sm">
-                                        <div className="flex items-center gap-3">
-                                            <img src={item.variant.imageUrl || item.product.imageUrls[0]} alt={item.product.name} className="w-12 h-12 rounded-md hidden sm:block"/>
-                                            <div>
-                                                <p className="font-semibold">{item.product.name}</p>
-                                                <p className="text-xs text-gray-500">{Object.values(item.variant.attributes).filter(Boolean).join(' / ')}</p>
+                                {order.items.map(item => {
+                                    const imagePublicId = item.variant.imagePublicId || (item.product.imagePublicIds && item.product.imagePublicIds.length > 0 ? item.product.imagePublicIds[0] : '');
+                                    return (
+                                        <div key={item.variant.id} className="flex justify-between items-center text-sm">
+                                            <div className="flex items-center gap-3">
+                                                <ImageResolver publicId={imagePublicId} alt={item.product.name} className="w-12 h-12 rounded-md hidden sm:block" width={100} />
+                                                <div>
+                                                    <p className="font-semibold">{item.product.name}</p>
+                                                    <p className="text-xs text-gray-500">{Object.values(item.variant.attributes).filter(Boolean).join(' / ')}</p>
+                                                </div>
                                             </div>
+                                            {order.status === 'Delivered' && (
+                                                <div>
+                                                    {item.returnRequest ? (
+                                                    <span className={`font-semibold capitalize ${getReturnStatusBadge(item.returnRequest.status)}`}>Return {item.returnRequest.status}</span>
+                                                    ) : (
+                                                    <button onClick={() => setReturnModalItem({ item, orderId: order.id })} className="font-semibold text-blue-600 hover:underline">Request Return</button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                         {order.status === 'Delivered' && (
-                                            <div>
-                                                {item.returnRequest ? (
-                                                  <span className={`font-semibold capitalize ${getReturnStatusBadge(item.returnRequest.status)}`}>Return {item.returnRequest.status}</span>
-                                                ) : (
-                                                  <button onClick={() => setReturnModalItem({ item, orderId: order.id })} className="font-semibold text-blue-600 hover:underline">Request Return</button>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                              <div className="border-t border-gray-200 pt-4 mt-4 flex justify-end items-center gap-4 flex-wrap">
@@ -241,28 +247,31 @@ const MyReturnsView: React.FC<{ orders: Order[]; onBack: () => void }> = ({ orde
             <h2 className="text-3xl font-bold mb-6">My Returns</h2>
             {returnItems.length > 0 ? (
                 <div className="space-y-4">
-                    {returnItems.map(({ orderId, item }) => (
-                        <div key={`${orderId}-${item.variant.id}`} className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
-                            <div className="flex justify-between items-start flex-wrap gap-2 mb-4">
-                                <div>
-                                    <p className="text-sm font-bold">Order ID: <span className="text-blue-600 font-mono">{orderId}</span></p>
-                                    <p className="text-xs text-gray-600">Requested on: {new Date(item.returnRequest!.date).toLocaleDateString()}</p>
+                    {returnItems.map(({ orderId, item }) => {
+                        const imagePublicId = item.variant.imagePublicId || (item.product.imagePublicIds && item.product.imagePublicIds.length > 0 ? item.product.imagePublicIds[0] : '');
+                        return (
+                            <div key={`${orderId}-${item.variant.id}`} className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
+                                <div className="flex justify-between items-start flex-wrap gap-2 mb-4">
+                                    <div>
+                                        <p className="text-sm font-bold">Order ID: <span className="text-blue-600 font-mono">{orderId}</span></p>
+                                        <p className="text-xs text-gray-600">Requested on: {new Date(item.returnRequest!.date).toLocaleDateString()}</p>
+                                    </div>
+                                    {getStatusBadge(item.returnRequest!.status)}
                                 </div>
-                                {getStatusBadge(item.returnRequest!.status)}
-                            </div>
-                            <div className="flex items-center gap-4 mb-4 pb-4 border-b">
-                                <img src={item.variant.imageUrl || item.product.imageUrls[0]} alt={item.product.name} className="w-16 h-16 rounded-md" />
+                                <div className="flex items-center gap-4 mb-4 pb-4 border-b">
+                                    <ImageResolver publicId={imagePublicId} alt={item.product.name} className="w-16 h-16 rounded-md" width={150} />
+                                    <div>
+                                        <p className="font-semibold">{item.product.name}</p>
+                                        <p className="text-sm text-gray-600">{Object.values(item.variant.attributes).filter(Boolean).join(' / ')}</p>
+                                    </div>
+                                </div>
                                 <div>
-                                    <p className="font-semibold">{item.product.name}</p>
-                                    <p className="text-sm text-gray-600">{Object.values(item.variant.attributes).filter(Boolean).join(' / ')}</p>
+                                    <h4 className="text-sm font-semibold text-gray-800">Reason for return:</h4>
+                                    <p className="text-sm text-gray-600 italic">"{item.returnRequest!.reason}"</p>
                                 </div>
                             </div>
-                            <div>
-                                <h4 className="text-sm font-semibold text-gray-800">Reason for return:</h4>
-                                <p className="text-sm text-gray-600 italic">"{item.returnRequest!.reason}"</p>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             ) : (
                 <p className="text-gray-600">You have not requested any returns.</p>

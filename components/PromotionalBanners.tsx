@@ -5,21 +5,21 @@ import ImageResolver from './ImageResolver';
 
 interface PromotionalBannersProps {
     banners: PromoBannerConfig[];
-    scrollOffset: number;
 }
 
-const PromotionalBanners: React.FC<PromotionalBannersProps> = ({ banners, scrollOffset }) => {
+const PromotionalBanners: React.FC<PromotionalBannersProps> = ({ banners }) => {
     return (
         <div className="my-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {banners.map(banner => (
                     <div key={banner.id} className="relative h-64 rounded-lg overflow-hidden group shadow-sm border border-gray-200">
                         <ImageResolver 
-                            src={banner.imageUrl} 
+                            publicId={banner.imagePublicId} 
+                            width={600}
                             alt={banner.title} 
-                            className="absolute inset-0 w-full h-full object-cover" 
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                             style={{
-                                objectPosition: `${banner.focalPoint?.x || 50}% ${banner.focalPoint?.y || 50}%`
+                                objectPosition: `${banner.focalPoint?.x || 50}% ${banner.focalPoint?.y || 50}%`,
                             }}
                             loading="lazy"
                             decoding="async"

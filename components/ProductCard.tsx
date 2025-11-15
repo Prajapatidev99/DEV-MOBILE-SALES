@@ -2,6 +2,7 @@
 import * as React from 'react';
 import type { Product, DisplayableProduct, ProductVariant } from '../types';
 import { HeartIcon, ShoppingCartIcon, CompareIcon } from './icons';
+import ImageResolver from './ImageResolver';
 
 interface ProductCardProps {
   product: Product | DisplayableProduct;
@@ -31,7 +32,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     onToggleCompare
 }) => {
   let href: string;
-  let imageUrl: string;
+  let imagePublicId: string;
   let name: string;
   let priceDisplay: string;
   let inStock: boolean;
@@ -47,7 +48,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   if (isVariantCard) {
     parentId = product.parentId;
     href = `#/product/${parentId}`;
-    imageUrl = product.imageUrl;
+    imagePublicId = product.imagePublicId;
     name = product.product.name; // Use base product name for a cleaner look
     priceDisplay = `₹${product.price.toLocaleString('en-IN')}`;
     inStock = product.inStock;
@@ -64,18 +65,20 @@ const ProductCard: React.FC<ProductCardProps> = ({
   } else {
     parentId = product.id;
     href = `#/product/${parentId}`;
-    const prices = product.variants.map(v => v.price);
+    const variants = product.variants || [];
+    const prices = variants.map(v => v.price);
     const minPrice = Math.min(...prices);
     const maxPrice = Math.max(...prices);
     priceDisplay = minPrice === maxPrice 
         ? `₹${minPrice.toLocaleString('en-IN')}`
         : `From ₹${minPrice.toLocaleString('en-IN')}`;
-    const firstAvailableVariant = product.variants.find(v => (v.inventory || []).some(s => s.quantity > 0));
+    const firstAvailableVariant = variants.find(v => (v.inventory || []).some(s => s.quantity > 0));
     inStock = !!firstAvailableVariant;
-    imageUrl = firstAvailableVariant?.imageUrl || product.imageUrls[0];
+    const imageIds = product.imagePublicIds || [];
+    imagePublicId = firstAvailableVariant?.imagePublicId || (imageIds.length > 0 ? imageIds[0] : '');
     name = product.name;
-    hasDiscount = product.variants.some(v => v.originalPrice && v.originalPrice > v.price);
-    discountLabel = product.variants.find(v => v.discountLabel)?.discountLabel;
+    hasDiscount = variants.some(v => v.originalPrice && v.originalPrice > v.price);
+    discountLabel = variants.find(v => v.discountLabel)?.discountLabel;
   }
   
   isLiked = likedItems.includes(parentId);
@@ -118,7 +121,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           onAddToCart(product.product, product.variant, e);
       } else {
           // This is a full Product, find the first in-stock variant to add.
-          const variantToAdd = product.variants.find(v => (v.inventory || []).some(s => s.quantity > 0));
+          const variantToAdd = (product.variants || []).find(v => (v.inventory || []).some(s => s.quantity > 0));
           if (variantToAdd) {
               onAddToCart(product, variantToAdd, e);
           }
@@ -134,9 +137,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div 
             className="p-4 relative overflow-hidden"
           >
-            <img 
+            <ImageResolver 
+              publicId={imagePublicId}
+              width={400}
               className="w-full h-40 object-contain transition-transform duration-300 group-hover:scale-110"
-              src={imageUrl} 
               alt={name} 
               loading="lazy"
               decoding="async"

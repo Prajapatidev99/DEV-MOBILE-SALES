@@ -1,32 +1,36 @@
 import * as React from 'react';
 import type { Product } from '../types';
+import ImageResolver from './ImageResolver';
 
 interface CompareTrayProps {
     products: Product[];
     onCompare: () => void;
-    onClear: () => void;
+    onClose: () => void;
     onRemove: (productId: number) => void;
 }
 
-const CompareTray: React.FC<CompareTrayProps> = ({ products, onCompare, onClear, onRemove }) => {
+const CompareTray: React.FC<CompareTrayProps> = ({ products, onCompare, onClose, onRemove }) => {
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-gray-800 text-white shadow-lg z-30 animate-tray-slide-in">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-20">
                     <div className="flex items-center gap-4">
                         <h3 className="text-lg font-bold hidden sm:block">Compare Products</h3>
-                        {products.map(product => (
-                            <div key={product.id} className="relative flex items-center bg-gray-700 p-1 rounded-md">
-                                <img src={product.imageUrls[0]} alt={product.name} className="w-12 h-12 object-contain rounded-md" />
-                                <button
-                                    onClick={() => onRemove(product.id)}
-                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold"
-                                    aria-label={`Remove ${product.name} from comparison`}
-                                >
-                                    &times;
-                                </button>
-                            </div>
-                        ))}
+                        {products.map(product => {
+                            const imagePublicId = (product.imagePublicIds && product.imagePublicIds.length > 0) ? product.imagePublicIds[0] : '';
+                            return (
+                                <div key={product.id} className="relative flex items-center bg-gray-700 p-1 rounded-md">
+                                    <ImageResolver publicId={imagePublicId} alt={product.name} className="w-12 h-12 object-contain rounded-md" width={100} />
+                                    <button
+                                        onClick={() => onRemove(product.id)}
+                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold"
+                                        aria-label={`Remove ${product.name} from comparison`}
+                                    >
+                                        &times;
+                                    </button>
+                                </div>
+                            );
+                        })}
                         {Array.from({ length: 2 - products.length }).map((_, index) => (
                             <div key={`placeholder-${index}`} className="w-14 h-14 bg-gray-700 rounded-md border-2 border-dashed border-gray-500 hidden sm:block"></div>
                         ))}
@@ -40,7 +44,7 @@ const CompareTray: React.FC<CompareTrayProps> = ({ products, onCompare, onClear,
                             Compare ({products.length}/2)
                         </button>
                         <button
-                            onClick={onClear}
+                            onClick={onClose}
                             className="text-gray-400 hover:text-white text-sm"
                         >
                             Clear

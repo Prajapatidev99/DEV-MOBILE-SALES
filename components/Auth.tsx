@@ -8,7 +8,7 @@ interface AuthProps {
     onSignup: (name: string, email: string, pass: string, mobile: string, marketingConsent: boolean) => void;
 }
 
-type AuthMode = 'login' | 'signup' | 'loginOtp' | 'forgotPassword' | 'resetPassword';
+type AuthMode = 'login' | 'signup' | 'loginOtp' | 'forgotPassword';
 
 const FloatingLabelInput: React.FC<{ id: string, type: string, value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, label: string, required?: boolean, [key: string]: any }> = 
 ({ id, type, value, onChange, label, required = false, ...props }) => (
@@ -60,8 +60,6 @@ const Auth: React.FC<AuthProps> = ({ onClose, onAuthSuccess, onSignup }) => {
     const [email, setEmail] = React.useState('');
     const [mobile, setMobile] = React.useState('');
     const [password, setPassword] = React.useState('');
-    const [newPassword, setNewPassword] = React.useState('');
-    const [confirmPassword, setConfirmPassword] = React.useState('');
     const [identifier, setIdentifier] = React.useState('');
     const [otp, setOtp] = React.useState('');
     const [marketingConsent, setMarketingConsent] = React.useState(true);
@@ -69,19 +67,18 @@ const Auth: React.FC<AuthProps> = ({ onClose, onAuthSuccess, onSignup }) => {
     // State management
     const [isLoading, setIsLoading] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
+    const [resetEmailSent, setResetEmailSent] = React.useState(false);
     const userForOtp = React.useRef<User | null>(null);
-    const identifierForReset = React.useRef<string>('');
 
     const resetForm = () => {
         setName('');
         setEmail('');
         setMobile('');
         setPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
         setIdentifier('');
         setOtp('');
         setError(null);
+        setResetEmailSent(false);
     }
 
     const switchMode = (newMode: AuthMode) => {
@@ -130,31 +127,8 @@ const Auth: React.FC<AuthProps> = ({ onClose, onAuthSuccess, onSignup }) => {
         setError(null);
         setIsLoading(true);
         try {
-            await api.findUserByIdentifier(identifier);
-            identifierForReset.current = identifier;
-            switchMode('resetPassword');
-        } catch (err) {
-            setError((err as Error).message);
-        }
-        setIsLoading(false);
-    }
-
-    const handleResetSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newPassword !== confirmPassword) {
-            setError('Passwords do not match.');
-            return;
-        }
-        if (newPassword.length < 6) {
-            setError('Password must be at least 6 characters long.');
-            return;
-        }
-        setError(null);
-        setIsLoading(true);
-        try {
-            await api.updatePassword(identifierForReset.current, newPassword);
-            alert('Password has been updated successfully. Please log in with your new password.');
-            switchMode('login');
+            await api.sendPasswordReset(identifier);
+            setResetEmailSent(true);
         } catch (err) {
             setError((err as Error).message);
         }
@@ -165,28 +139,10 @@ const Auth: React.FC<AuthProps> = ({ onClose, onAuthSuccess, onSignup }) => {
         setIsLoading(true);
         setError(null);
         try {
-            let mockUserData: Omit<User, 'id' | 'password'>;
-            if (provider === 'google') {
-                mockUserData = {
-                    name: 'Google User',
-                    email: 'google.user@example.com',
-                    role: 'customer',
-                    mobile: '9999999999',
-                };
-            } else { // facebook
-                mockUserData = {
-                    name: 'Facebook User',
-                    email: 'facebook.user@example.com',
-                    role: 'customer',
-                    mobile: '8888888888',
-                };
-            }
-
-            const user = await api.findOrCreateSocialUser(mockUserData);
-            api.finalizeLogin(user); // Set the session
-            onAuthSuccess(user); // Trigger the success callback, which will close the modal
+            const user = await api.signInWithProvider(provider);
+            onAuthSuccess(user);
         } catch (err) {
-            setError("Social login failed. Please try again.");
+            setError((err as Error).message || "Social login failed. Please try again.");
             setIsLoading(false); // Only stop loading on error, as success unmounts the component
         }
     };
@@ -202,7 +158,7 @@ const Auth: React.FC<AuthProps> = ({ onClose, onAuthSuccess, onSignup }) => {
                             <h2 className="text-3xl font-bold mb-2 text-gray-800">Login</h2>
                             <p className="text-gray-500 mb-6">Welcome back! Log in to access your account.</p>
                             <form onSubmit={handleLoginSubmit} className="space-y-6">
-                                <FloatingLabelInput id="identifier" type="text" value={identifier} onChange={(e) => setIdentifier(e.target.value)} label="Email or Mobile" required />
+                                <FloatingLabelInput id="identifier" type="email" value={identifier} onChange={(e) => setIdentifier(e.target.value)} label="Email" required />
                                 <div>
                                     <FloatingLabelInput id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} label="Password" required />
                                     <button type="button" onClick={() => switchMode('forgotPassword')} className="text-xs text-blue-600 hover:underline mt-1 float-right">Forgot Password?</button>
@@ -253,31 +209,36 @@ const Auth: React.FC<AuthProps> = ({ onClose, onAuthSuccess, onSignup }) => {
                             </p>
                         </>
                     );
-                    case 'forgotPassword': return (
+                    case 'forgotPassword': 
+                        if (resetEmailSent) {
+                            return (
+                                <>
+                                    <h2 className="text-3xl font-bold mb-2 text-gray-800 text-center">Check Your Email</h2>
+                                    <p className="text-gray-500 mb-6 px-4 text-center">
+                                        A password reset link has been sent to <strong>{identifier}</strong>. Please check your inbox and spam folder.
+                                    </p>
+                                    <button
+                                        onClick={() => switchMode('login')}
+                                        className="w-full bg-yellow-400 text-black font-bold py-3 rounded-md hover:bg-yellow-500 transition-colors duration-300"
+                                    >
+                                        Back to Login
+                                    </button>
+                                </>
+                            );
+                        }
+                        return (
                          <>
                             <h2 className="text-3xl font-bold mb-2 text-gray-800">Forgot Password</h2>
-                            <p className="text-gray-500 mb-6 px-4">Enter your email or mobile number to reset your password.</p>
+                            <p className="text-gray-500 mb-6 px-4">Enter your email to reset your password.</p>
                             <form onSubmit={handleForgotSubmit} className="space-y-6">
-                                <FloatingLabelInput id="identifier" type="text" value={identifier} onChange={(e) => setIdentifier(e.target.value)} label="Email or Mobile Number" required autoFocus />
+                                <FloatingLabelInput id="identifier" type="email" value={identifier} onChange={(e) => setIdentifier(e.target.value)} label="Email" required autoFocus />
                                 {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-                                <button type="submit" disabled={isLoading} className="w-full bg-yellow-400 text-black font-bold py-3 rounded-md hover:bg-yellow-500 transition-colors duration-300 disabled:bg-gray-400">{isLoading ? 'Searching...' : 'Find Account'}</button>
+                                <button type="submit" disabled={isLoading} className="w-full bg-yellow-400 text-black font-bold py-3 rounded-md hover:bg-yellow-500 transition-colors duration-300 disabled:bg-gray-400">{isLoading ? 'Sending Link...' : 'Send Reset Link'}</button>
                             </form>
                             <p className="text-center mt-6 text-sm text-gray-500">
                                 Remembered your password?
                                 <button onClick={() => switchMode('login')} className="font-semibold text-blue-600 hover:underline ml-2">Back to Login</button>
                             </p>
-                        </>
-                    );
-                    case 'resetPassword': return (
-                        <>
-                            <h2 className="text-3xl font-bold mb-2 text-gray-800">Reset Password</h2>
-                            <p className="text-gray-500 mb-6 px-4">Please create a new password for your account.</p>
-                            <form onSubmit={handleResetSubmit} className="space-y-6">
-                                <FloatingLabelInput id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} label="New Password" required autoFocus />
-                                <FloatingLabelInput id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} label="Confirm New Password" required />
-                                {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-                                <button type="submit" disabled={isLoading} className="w-full bg-yellow-400 text-black font-bold py-3 rounded-md hover:bg-yellow-500 transition-colors duration-300 disabled:bg-gray-400">{isLoading ? 'Updating...' : 'Update Password'}</button>
-                            </form>
                         </>
                     );
                     default: return null;

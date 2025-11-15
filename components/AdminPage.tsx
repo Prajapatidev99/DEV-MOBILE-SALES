@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { Product, HomepageConfig, Coupon, Order, User, Store, Payout, FocalPoint, HeroBannerConfig, PromoBannerConfig, ProductVariant, CartItem } from '../types';
 import ProductEditorModal from './ProductEditorModal';
 import * as api from '../api';
-import ImageResolver from './ImageResolver';
+import ImageResolver, { getCloudinaryUrl } from './ImageResolver';
 
 const placeholderPromo = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVlnaHQ9IjEwMCUiIGZpbGw9IiNkM2U1ZjUiIC8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMCIgZHk9Ii4zZW0iIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlQcm9tbzwvdGV4dD48L3N2Zz4=';
 
@@ -115,7 +115,7 @@ const HomepageEditor: React.FC<HomepageEditorProps> = ({ config, onSave, addToas
                     id: Date.now(),
                     title: 'New Promo Banner',
                     subtitle: 'Edit this subtitle',
-                    imageUrl: placeholderPromo,
+                    imagePublicId: 'https://res.cloudinary.com/dv9z9uaht/image/upload/v1721242380/dev-mobile/placeholder_vpo23u.jpg',
                     link: '#/shop',
                 }
             ]
@@ -131,34 +131,6 @@ const HomepageEditor: React.FC<HomepageEditorProps> = ({ config, onSave, addToas
         }
     };
     
-    const handleFileChange = async (
-      e: React.ChangeEvent<HTMLInputElement>,
-      type: 'hero' | 'promo',
-      index?: number
-    ) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            addToast('Image size should not exceed 5MB.', 'error');
-            return;
-        }
-        try {
-            const imageKey = await api.saveImageToDb(file);
-            const imageUrl = `idb://${imageKey}`;
-            
-            if (type === 'hero') {
-                handleHeroChange('imageUrl', imageUrl);
-            } else if (type === 'promo' && index !== undefined) {
-                handlePromoChange(index, 'imageUrl', imageUrl);
-            }
-            addToast('Image uploaded to local database.', 'success');
-        } catch (error) {
-            console.error("Failed to save image to DB", error);
-            addToast('Failed to save image.', 'error');
-        }
-      }
-    };
-
     const handleSetFocalPoint = (e: React.MouseEvent<HTMLImageElement>) => {
         if (!focalPointTarget) return;
 
@@ -193,14 +165,11 @@ const HomepageEditor: React.FC<HomepageEditorProps> = ({ config, onSave, addToas
                             <input value={editorState.hero.title} onChange={e => handleHeroChange('title', e.target.value)} className={inputClasses} />
                         </div>
                          <div>
-                            <label className={labelClasses}>Image</label>
-                            <div className="flex items-center gap-4">
-                                <ImageResolver src={editorState.hero.imageUrl} alt="Hero preview" className="w-24 h-16 object-cover rounded-md border" />
-                                <input type="file" onChange={e => handleFileChange(e, 'hero')} accept="image/*" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                            </div>
+                            <label className={labelClasses}>Image Public ID</label>
+                            <input type="text" placeholder="dev-mobile/hero-banner" value={editorState.hero.imagePublicId} onChange={e => handleHeroChange('imagePublicId', e.target.value)} className={inputClasses} />
                         </div>
                     </div>
-                    <button onClick={() => { setImagePreviewUrl(editorState.hero.imageUrl); setFocalPointTarget({ type: 'hero' }); }} className="text-sm text-blue-600 hover:underline mt-2">Set Image Focal Point</button>
+                    <button onClick={() => { setImagePreviewUrl(getCloudinaryUrl(editorState.hero.imagePublicId, 1200)); setFocalPointTarget({ type: 'hero' }); }} className="text-sm text-blue-600 hover:underline mt-2">Set Image Focal Point</button>
                 </div>
 
                 {/* Promo Banners Editor */}
@@ -221,15 +190,12 @@ const HomepageEditor: React.FC<HomepageEditorProps> = ({ config, onSave, addToas
                                 <div><label className={labelClasses}>Title</label><input value={promo.title} onChange={e => handlePromoChange(index, 'title', e.target.value)} className={inputClasses} /></div>
                                 <div><label className={labelClasses}>Subtitle</label><input value={promo.subtitle} onChange={e => handlePromoChange(index, 'subtitle', e.target.value)} className={inputClasses} /></div>
                                 <div className="md:col-span-2">
-                                    <label className={labelClasses}>Image</label>
-                                    <div className="flex items-center gap-4">
-                                        <ImageResolver src={promo.imageUrl} alt={`Promo ${index+1} preview`} className="w-24 h-16 object-cover rounded-md border" />
-                                        <input type="file" onChange={e => handleFileChange(e, 'promo', index)} accept="image/*" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                                    </div>
+                                    <label className={labelClasses}>Image Public ID</label>
+                                    <input type="text" placeholder="dev-mobile/promo-image" value={promo.imagePublicId} onChange={e => handlePromoChange(index, 'imagePublicId', e.target.value)} className={inputClasses} />
                                 </div>
                                 <div><label className={labelClasses}>Link (e.g., #/shop/Smartphones)</label><input value={promo.link} onChange={e => handlePromoChange(index, 'link', e.target.value)} className={inputClasses} /></div>
                             </div>
-                            <button onClick={() => { setImagePreviewUrl(promo.imageUrl); setFocalPointTarget({ type: 'promo', index }); }} className="text-sm text-blue-600 hover:underline mt-2">Set Image Focal Point</button>
+                            <button onClick={() => { setImagePreviewUrl(getCloudinaryUrl(promo.imagePublicId, 600)); setFocalPointTarget({ type: 'promo', index }); }} className="text-sm text-blue-600 hover:underline mt-2">Set Image Focal Point</button>
                         </div>
                     ))}
                     <button

@@ -14,9 +14,13 @@ interface ProductCarouselProps {
   onToggleLike: (productId: number) => void;
   likedItems: number[];
   onAddToCart: (product: Product, variant: ProductVariant, event: React.MouseEvent) => void;
+  onNotifyMe?: (productId: number) => void;
+  notificationList?: number[];
+  compareList?: number[];
+  onToggleCompare?: (productId: number) => void;
 }
 
-const ProductCarousel: React.FC<ProductCarouselProps> = ({ title, products, onToggleLike, likedItems, onAddToCart }) => {
+const ProductCarousel: React.FC<ProductCarouselProps> = ({ title, products, onToggleLike, likedItems, onAddToCart, onNotifyMe, notificationList, compareList, onToggleCompare }) => {
     const scrollContainer = React.useRef<HTMLDivElement>(null);
 
     const scroll = (direction: 'left' | 'right') => {
@@ -50,6 +54,10 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({ title, products, onTo
                             likedItems={likedItems}
                             onToggleLike={onToggleLike}
                             onAddToCart={onAddToCart}
+                            onNotifyMe={onNotifyMe}
+                            notificationList={notificationList}
+                            compareList={compareList}
+                            onToggleCompare={onToggleCompare}
                         />
                     </div>
                 ))}
@@ -108,42 +116,41 @@ const HomePage: React.FC<HomePageProps> = ({ homepageConfig, allProducts, brands
   const newlyLaunched = [...allProducts].sort((a,b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime()).slice(0, 10);
   const bestSelling = [...allProducts].sort((a,b) => b.rating - a.rating).slice(0, 10);
   const topSmartWatches = allProducts.filter(p => p.product.category === 'Smartwatches').slice(0, 10);
+  const refurbishedDeals = allProducts.filter(p => p.product.category === 'Refurbished Phones').slice(0, 10);
+  
+  // FIX: Converted recommendedProducts (Product[]) to DisplayableProduct[] to match carousel prop types.
+  const recommendedDisplayableProducts = React.useMemo(() => {
+    if (!recommendedProducts || recommendedProducts.length === 0) return [];
+    const recommendedProductIds = new Set(recommendedProducts.map(p => p.id));
+    // Filter allProducts to find the displayable versions, ensuring one variant per product.
+    const uniqueRecs: DisplayableProduct[] = [];
+    const addedParentIds = new Set<number>();
+    allProducts.forEach(dp => {
+      if (recommendedProductIds.has(dp.parentId) && !addedParentIds.has(dp.parentId)) {
+        uniqueRecs.push(dp);
+        addedParentIds.add(dp.parentId);
+      }
+    });
+    return uniqueRecs;
+  }, [recommendedProducts, allProducts]);
+
+  // FIX: Added a fallback. If AI recommendations are empty, show the top 5 best-selling products instead.
+  const recommendationsOrFallback = recommendedDisplayableProducts.length > 0
+    ? recommendedDisplayableProducts
+    : bestSelling.slice(0, 5);
 
   return (
     <div className="space-y-4">
       <HeroBanner 
         title={homepageConfig.hero.title}
-        imageUrl={homepageConfig.hero.imageUrl}
+        imagePublicId={homepageConfig.hero.imagePublicId}
         focalPoint={homepageConfig.hero.focalPoint}
         onShopNowClick={() => onBrandSelect('All')} 
         scrollOffset={scrollOffset} 
       />
       <AnimateOnScroll><BrandSlider brands={brands} onBrandSelect={onBrandSelect} /></AnimateOnScroll>
       
-      {isRecommendationsLoading ? (
-        <CarouselSkeleton title="Recommended for You" />
-      ) : recommendedProducts.length > 0 && (
-        <AnimateOnScroll>
-        <ProductCarousel 
-            title="Recommended for You"
-            products={newlyLaunched} // Using newly launched as placeholder for recommendations
-            likedItems={likedItems}
-            onToggleLike={onToggleLike}
-            onAddToCart={onAddToCart}
-        />
-        </AnimateOnScroll>
-      )}
-
-      <AnimateOnScroll>
-      <ProductCarousel 
-        title="Newly Launched and Trending"
-        products={newlyLaunched}
-        likedItems={likedItems}
-        onToggleLike={onToggleLike}
-        onAddToCart={onAddToCart}
-      />
-      </AnimateOnScroll>
-      <AnimateOnScroll><PromotionalBanners banners={homepageConfig.promos} scrollOffset={scrollOffset} /></AnimateOnScroll>
+      {/* FIX: Moved Best Selling carousel here from the bottom */}
       <AnimateOnScroll>
        <ProductCarousel 
         title="Best Selling Phones"
@@ -151,8 +158,64 @@ const HomePage: React.FC<HomePageProps> = ({ homepageConfig, allProducts, brands
         likedItems={likedItems}
         onToggleLike={onToggleLike}
         onAddToCart={onAddToCart}
+        onNotifyMe={onNotifyMe}
+        notificationList={notificationList}
+        compareList={compareList}
+        onToggleCompare={onToggleCompare}
       />
       </AnimateOnScroll>
+      
+      <AnimateOnScroll>
+      <ProductCarousel 
+        title="Newly Launched and Trending"
+        products={newlyLaunched}
+        likedItems={likedItems}
+        onToggleLike={onToggleLike}
+        onAddToCart={onAddToCart}
+        onNotifyMe={onNotifyMe}
+        notificationList={notificationList}
+        compareList={compareList}
+        onToggleCompare={onToggleCompare}
+      />
+      </AnimateOnScroll>
+      
+      <AnimateOnScroll><PromotionalBanners banners={homepageConfig.promos} /></AnimateOnScroll>
+      
+      {refurbishedDeals.length > 0 && (
+        <AnimateOnScroll>
+          <ProductCarousel
+            title="Top Deals on Refurbished Phones"
+            products={refurbishedDeals}
+            likedItems={likedItems}
+            onToggleLike={onToggleLike}
+            onAddToCart={onAddToCart}
+            onNotifyMe={onNotifyMe}
+            notificationList={notificationList}
+            compareList={compareList}
+            onToggleCompare={onToggleCompare}
+          />
+        </AnimateOnScroll>
+      )}
+
+      {/* FIX: Moved Recommended for You here, and implemented fallback logic. */}
+      {isRecommendationsLoading ? (
+        <CarouselSkeleton title="Recommended for You" />
+      ) : (
+        <AnimateOnScroll>
+        <ProductCarousel 
+            title="Recommended for You"
+            products={recommendationsOrFallback}
+            likedItems={likedItems}
+            onToggleLike={onToggleLike}
+            onAddToCart={onAddToCart}
+            onNotifyMe={onNotifyMe}
+            notificationList={notificationList}
+            compareList={compareList}
+            onToggleCompare={onToggleCompare}
+        />
+        </AnimateOnScroll>
+      )}
+
       {recentlyViewedProducts.length > 0 && (
          <AnimateOnScroll>
          <RecentlyViewed
@@ -160,6 +223,10 @@ const HomePage: React.FC<HomePageProps> = ({ homepageConfig, allProducts, brands
             likedItems={likedItems}
             onToggleLike={onToggleLike}
             onAddToCart={onAddToCart}
+            onNotifyMe={onNotifyMe}
+            notificationList={notificationList}
+            compareList={compareList}
+            onToggleCompare={onToggleCompare}
         />
         </AnimateOnScroll>
       )}
@@ -170,6 +237,10 @@ const HomePage: React.FC<HomePageProps> = ({ homepageConfig, allProducts, brands
         likedItems={likedItems}
         onToggleLike={onToggleLike}
         onAddToCart={onAddToCart}
+        onNotifyMe={onNotifyMe}
+        notificationList={notificationList}
+        compareList={compareList}
+        onToggleCompare={onToggleCompare}
       />
       </AnimateOnScroll>
     </div>

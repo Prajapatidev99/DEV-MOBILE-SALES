@@ -7,9 +7,13 @@ interface RecentlyViewedProps {
   onToggleLike: (productId: number) => void;
   likedItems: number[];
   onAddToCart: (product: Product, variant: ProductVariant, event: React.MouseEvent) => void;
+  onNotifyMe?: (productId: number) => void;
+  notificationList?: number[];
+  compareList?: number[];
+  onToggleCompare?: (productId: number) => void;
 }
 
-const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ products, likedItems, onToggleLike, onAddToCart }) => {
+const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ products, likedItems, onToggleLike, onAddToCart, onNotifyMe, notificationList, compareList, onToggleCompare }) => {
     const scrollContainer = React.useRef<HTMLDivElement>(null);
 
     const scroll = (direction: 'left' | 'right') => {
@@ -44,6 +48,10 @@ const RecentlyViewed: React.FC<RecentlyViewedProps> = ({ products, likedItems, o
                             likedItems={likedItems}
                             onToggleLike={onToggleLike}
                             onAddToCart={onAddToCart}
+                            onNotifyMe={onNotifyMe}
+                            notificationList={notificationList}
+                            compareList={compareList}
+                            onToggleCompare={onToggleCompare}
                         />
                     </div>
                 ))}

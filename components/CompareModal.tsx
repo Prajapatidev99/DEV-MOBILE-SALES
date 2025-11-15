@@ -1,6 +1,7 @@
 import * as React from 'react';
 import type { Product, ProductVariant } from '../types';
 import { ShoppingCartIcon, StarIcon, HeartIcon } from './icons';
+import ImageResolver from './ImageResolver';
 
 interface CompareModalProps {
     products: Product[];
@@ -28,21 +29,24 @@ const CompareModal: React.FC<CompareModalProps> = ({ products, onClose, onAddToC
                             <thead>
                                 <tr>
                                     <th className="w-1/4">Feature</th>
-                                    {products.map(p => (
-                                        <th key={p.id} className="text-center">
-                                            <a href={`#/product/${p.id}`} onClick={onClose}>
-                                                <img src={p.imageUrls[0]} alt={p.name} className="w-32 h-32 object-contain mx-auto mb-2" loading="lazy" decoding="async" />
-                                                <p className="font-bold text-blue-600 hover:underline">{p.name}</p>
-                                            </a>
-                                        </th>
-                                    ))}
+                                    {products.map(p => {
+                                        const imagePublicId = (p.imagePublicIds && p.imagePublicIds.length > 0) ? p.imagePublicIds[0] : '';
+                                        return (
+                                            <th key={p.id} className="text-center">
+                                                <a href={`#/product/${p.id}`} onClick={onClose}>
+                                                    <ImageResolver publicId={imagePublicId} alt={p.name} className="w-32 h-32 object-contain mx-auto mb-2" width={250} loading="lazy" decoding="async" />
+                                                    <p className="font-bold text-blue-600 hover:underline">{p.name}</p>
+                                                </a>
+                                            </th>
+                                        );
+                                    })}
                                     {products.length < 2 && <th></th>}
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
                                     <td>Price</td>
-                                    {products.map(p => <td key={p.id} className="text-center font-bold text-lg">From ₹{Math.min(...p.variants.map(v => v.price)).toLocaleString('en-IN')}</td>)}
+                                    {products.map(p => <td key={p.id} className="text-center font-bold text-lg">From ₹{Math.min(...(p.variants || []).map(v => v.price)).toLocaleString('en-IN')}</td>)}
                                     {products.length < 2 && <td></td>}
                                 </tr>
                                 <tr>
@@ -51,7 +55,7 @@ const CompareModal: React.FC<CompareModalProps> = ({ products, onClose, onAddToC
                                         <td key={p.id} className="text-center">
                                             <div className="flex items-center justify-center">
                                                 <StarIcon className="w-5 h-5 text-yellow-400 mr-1" />
-                                                <span>{p.rating} ({p.reviews.length} reviews)</span>
+                                                <span>{p.rating} ({(p.reviews || []).length} reviews)</span>
                                             </div>
                                         </td>
                                     ))}
@@ -73,23 +77,29 @@ const CompareModal: React.FC<CompareModalProps> = ({ products, onClose, onAddToC
                                 ))}
                                 <tr>
                                     <td></td>
-                                    {products.map(p => (
-                                        <td key={p.id} className="text-center p-4">
-                                            <button
-                                                onClick={(e) => onAddToCart(p, p.variants[0], e)}
-                                                className="CartBtn mx-auto"
-                                            >
-                                                <span className="IconContainer">
-                                                    <ShoppingCartIcon className="icon h-6 w-6 text-gray-900" />
-                                                </span>
-                                                <span className="text">Add to Cart</span>
-                                            </button>
-                                            <button onClick={() => onToggleLike(p.id)} className="mt-2 text-sm text-gray-600 hover:text-red-500 flex items-center justify-center w-full">
-                                                <HeartIcon className={`w-4 h-4 mr-1 ${likedItems.includes(p.id) ? 'text-red-500 fill-current' : ''}`} />
-                                                {likedItems.includes(p.id) ? 'In Wishlist' : 'Add to Wishlist'}
-                                            </button>
-                                        </td>
-                                    ))}
+                                    {products.map(p => {
+                                        const variantToAdd = (p.variants || []).find(v => (v.inventory || []).some(s => s.quantity > 0));
+                                        return (
+                                            <td key={p.id} className="text-center p-4">
+                                                <div>
+                                                    <button
+                                                        onClick={(e) => { if (variantToAdd) { onAddToCart(p, variantToAdd, e); } }}
+                                                        disabled={!variantToAdd}
+                                                        className="CartBtn mx-auto disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                                    >
+                                                        <span className="IconContainer">
+                                                            <ShoppingCartIcon className="icon h-6 w-6 text-gray-900" />
+                                                        </span>
+                                                        <span className="text">{variantToAdd ? 'Add to Cart' : 'Out of Stock'}</span>
+                                                    </button>
+                                                </div>
+                                                <button onClick={() => onToggleLike(p.id)} className="mt-2 text-sm text-gray-600 hover:text-red-500 flex items-center justify-center w-full">
+                                                    <HeartIcon className={`w-4 h-4 mr-1 ${likedItems.includes(p.id) ? 'text-red-500 fill-current' : ''}`} />
+                                                    {likedItems.includes(p.id) ? 'In Wishlist' : 'Add to Wishlist'}
+                                                </button>
+                                            </td>
+                                        )
+                                    })}
                                     {products.length < 2 && <td></td>}
                                 </tr>
                             </tbody>
@@ -101,4 +111,4 @@ const CompareModal: React.FC<CompareModalProps> = ({ products, onClose, onAddToC
     );
 };
 
-export default CompareModal;
+export default CompareModal;    

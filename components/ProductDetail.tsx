@@ -1,12 +1,12 @@
 // FIX: Changed React import to `import * as React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
 import * as React from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
 import type { Product, Review, User, ProductVariant, PriceComparison } from '../types';
 import { ShoppingCartIcon, StarIcon, CompareIcon } from './icons';
 import RelatedProducts from './RelatedProducts';
 import AddReviewForm from './AddReviewForm';
 import AnimateOnScroll from './AnimateOnScroll';
 import CountdownTimer from './CountdownTimer';
+import ImageResolver, { getCloudinaryUrl } from './ImageResolver';
 
 interface ProductDetailProps {
   product: Product;
@@ -45,8 +45,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
     compareList,
     onToggleCompare
 }) => {
-  const [selectedVariant, setSelectedVariant] = React.useState<ProductVariant>(() => product.variants.find(v => (v.inventory || []).some(s => s.quantity > 0)) || product.variants[0]);
-  const [mainImageUrl, setMainImageUrl] = React.useState(selectedVariant.imageUrl || product.imageUrls[0]);
+  const [selectedVariant, setSelectedVariant] = React.useState<ProductVariant>(() => (product.variants || []).find(v => (v.inventory || []).some(s => s.quantity > 0)) || (product.variants || [])[0]);
+  const [mainImagePublicId, setMainImagePublicId] = React.useState('');
   const [pinCode, setPinCode] = React.useState('');
   const [deliveryStatus, setDeliveryStatus] = React.useState<'idle' | 'checking' | 'available' | 'unavailable'>('idle');
   const imageRef = React.useRef<HTMLImageElement>(null);
@@ -65,7 +65,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
 
   React.useEffect(() => {
     // Reset state when the product changes
-    const initialVariant = product.variants.find(v => (v.inventory || []).some(s => s.quantity > 0)) || product.variants[0];
+    const variants = product.variants || [];
+    const initialVariant = variants.find(v => (v.inventory || []).some(s => s.quantity > 0)) || variants[0];
     setSelectedVariant(initialVariant);
     
     setViewMode('gallery');
@@ -79,15 +80,16 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
     setComparisonError(null);
     setIsComparingPrices(false);
 
-  }, [product, userPinCode]);
+  }, [product.id, userPinCode]);
 
   React.useEffect(() => {
-    setMainImageUrl(selectedVariant?.imageUrl || product.imageUrls[0]);
-  }, [selectedVariant, product.imageUrls]);
+    const imageIds = product.imagePublicIds || [];
+    setMainImagePublicId(selectedVariant?.imagePublicId || (imageIds.length > 0 ? imageIds[0] : ''));
+  }, [selectedVariant, product.imagePublicIds]);
   
   const options = React.useMemo(() => {
     const allOptions: { [key: string]: { value: string, colorCode?: string }[] } = {};
-    product.variants.forEach(variant => {
+    (product.variants || []).forEach(variant => {
         Object.entries(variant.attributes).forEach(([key, value]) => {
             if (!value) return;
             if (!allOptions[key]) allOptions[key] = [];
@@ -99,28 +101,29 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
     return allOptions;
   }, [product.variants]);
 
-  const thumbnailImages = React.useMemo(() => {
-    const mainImage = selectedVariant?.imageUrl || product.imageUrls[0];
-    const variantImages = product.variants
-        .map(v => v.imageUrl)
-        .filter((url): url is string => !!url);
-    // Combine, create unique set, and make sure the currently selected variant's image is first if it exists.
-    const allImages = [mainImage, ...variantImages, ...product.imageUrls];
+  const thumbnailPublicIds = React.useMemo(() => {
+    const imageIds = product.imagePublicIds || [];
+    const mainImage = selectedVariant?.imagePublicId || (imageIds.length > 0 ? imageIds[0] : '');
+    const variantImages = (product.variants || [])
+        .map(v => v.imagePublicId)
+        .filter((id): id is string => !!id);
+    const allImages = [mainImage, ...variantImages, ...imageIds];
     return [...new Set(allImages)];
-  }, [product.variants, product.imageUrls, selectedVariant]);
+  }, [product.variants, product.imagePublicIds, selectedVariant]);
   
   const handleOptionSelect = (key: string, value: string) => {
     const currentAttributes = { ...selectedVariant.attributes };
     currentAttributes[key as keyof typeof currentAttributes] = value;
     
+    const variants = product.variants || [];
     // Find the best matching variant
-    let bestMatch = product.variants.find(v => 
+    let bestMatch = variants.find(v => 
         Object.entries(currentAttributes).every(([attrKey, attrValue]) => v.attributes[attrKey as keyof typeof v.attributes] === attrValue)
     );
 
     // If no exact match, find the first available that matches the new selection
     if (!bestMatch) {
-       bestMatch = product.variants.find(v => v.attributes[key as keyof typeof v.attributes] === value) || selectedVariant;
+       bestMatch = variants.find(v => v.attributes[key as keyof typeof v.attributes] === value) || selectedVariant;
     }
     
     setSelectedVariant(bestMatch);
@@ -167,14 +170,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
     setComparisonError(null);
     setComparisonResults(null);
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const schema = {
-            type: Type.ARRAY,
+            type: 'ARRAY',
             items: {
-                type: Type.OBJECT,
+                type: 'OBJECT',
                 properties: {
-                    platform: { type: Type.STRING },
-                    url: { type: Type.STRING }
+                    platform: { type: 'STRING' },
+                    url: { type: 'STRING' }
                 },
                 required: ['platform', 'url']
             }
@@ -193,19 +195,32 @@ Based on this, create a search URL for this exact product on amazon.in and flipk
 
 Respond ONLY with the JSON object that matches the provided schema. If you cannot generate a URL for a platform, omit it from the result array.`;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: schema,
-            },
+        const backendUrl = 'http://localhost:3001';
+        const proxyResponse = await fetch(`${backendUrl}/api/generate-content`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                },
+            }),
         });
         
-        // FIX: Coerced `response.text` to a string. The type can be inferred as 'unknown', which is incompatible with `JSON.parse`. This ensures type safety and prevents a runtime error.
-        const jsonString = String(response.text);
-        const results = JSON.parse(jsonString) as PriceComparison[];
-        setComparisonResults(results);
+        if (!proxyResponse.ok) {
+            const errorData = await proxyResponse.json();
+            throw new Error(errorData.message || 'Failed to fetch from backend proxy.');
+        }
+
+        const data = await proxyResponse.json();
+
+        if (data.success && data.text) {
+            const results = JSON.parse(data.text) as PriceComparison[];
+            setComparisonResults(results);
+        } else {
+             throw new Error(data.message || "Invalid response from backend.");
+        }
 
     } catch (error) {
         console.error("Error fetching price comparison links:", error);
@@ -216,8 +231,9 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
   };
 
 
-  const averageRating = product.reviews.length > 0
-    ? (product.reviews.reduce((acc, review) => acc + review.rating, 0) / product.reviews.length).toFixed(1)
+  const reviews = product.reviews || [];
+  const averageRating = reviews.length > 0
+    ? (reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length).toFixed(1)
     : product.rating.toFixed(1);
 
   // 360 Viewer Drag Handlers
@@ -274,13 +290,13 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
   const isLiked = likedItems.includes(product.id);
   const isWatchingPrice = priceWatchList.includes(product.id);
   const isInCompare = compareList.includes(product.id);
-  const isInStock = (selectedVariant.inventory || []).some(s => s.quantity > 0);
+  const isInStock = selectedVariant && (selectedVariant.inventory || []).some(s => s.quantity > 0);
 
   const structuredData = {
     '@context': 'https://schema.org/',
     '@type': 'Product',
     name: product.name,
-    image: product.imageUrls,
+    image: (product.imagePublicIds || []).map(id => getCloudinaryUrl(id, 1200)),
     description: product.description,
     brand: {
       '@type': 'Brand',
@@ -290,15 +306,15 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
     offers: {
       '@type': 'AggregateOffer',
       priceCurrency: 'INR',
-      lowPrice: Math.min(...product.variants.map(v => v.price)),
-      highPrice: Math.max(...product.variants.map(v => v.price)),
-      offerCount: product.variants.length,
+      lowPrice: Math.min(...(product.variants || []).map(v => v.price)),
+      highPrice: Math.max(...(product.variants || []).map(v => v.price)),
+      offerCount: (product.variants || []).length,
     },
-    ...(product.reviews.length > 0 && {
+    ...(reviews.length > 0 && {
       aggregateRating: {
         '@type': 'AggregateRating',
         ratingValue: averageRating,
-        reviewCount: product.reviews.length,
+        reviewCount: reviews.length,
       }
     })
   };
@@ -317,14 +333,14 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
                   <div 
                     className="relative w-full aspect-square overflow-hidden rounded-lg shadow-sm border border-gray-200 mb-4"
                   >
-                    <img 
+                    <ImageResolver 
                       ref={imageRef}
-                      src={mainImageUrl} 
+                      publicId={mainImagePublicId}
                       alt={product.name}
                       className="w-full h-full object-contain transition-all duration-300 group-hover:scale-110"
                       loading="lazy"
                       decoding="async"
-                      key={mainImageUrl} // Force re-render on image change
+                      key={mainImagePublicId} // Force re-render on image change
                     />
                   </div>
                 ) : (
@@ -362,13 +378,13 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
 
             {viewMode === 'gallery' && (
               <div className="flex space-x-2 overflow-x-auto custom-scrollbar pb-2">
-                {thumbnailImages.map((url, index) => (
+                {thumbnailPublicIds.map((publicId, index) => (
                   <img
                     key={index}
-                    src={url}
+                    src={getCloudinaryUrl(publicId, 100)}
                     alt={`${product.name} thumbnail ${index + 1}`}
-                    onClick={() => setMainImageUrl(url)}
-                    className={`w-16 h-16 object-contain rounded-md cursor-pointer border-2 p-1 transition-all flex-shrink-0 ${mainImageUrl === url ? 'border-blue-500' : 'border-gray-200 hover:border-gray-400'}`}
+                    onClick={() => setMainImagePublicId(publicId)}
+                    className={`w-16 h-16 object-contain rounded-md cursor-pointer border-2 p-1 transition-all flex-shrink-0 ${mainImagePublicId === publicId ? 'border-blue-500' : 'border-gray-200 hover:border-gray-400'}`}
                     loading="lazy"
                     decoding="async"
                   />
@@ -403,12 +419,12 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
             <div className="flex items-center my-4 gap-4 flex-wrap">
               <div className="flex items-center">
                   <StarIcon className="w-5 h-5 text-yellow-400" />
-                  <span className="ml-2 text-gray-700 text-md">{averageRating} ({product.reviews.length} reviews)</span>
+                  <span className="ml-2 text-gray-700 text-md">{averageRating} ({reviews.length} reviews)</span>
               </div>
               <div>
                 <div className="flex items-baseline gap-3">
-                    <span className="text-3xl font-bold text-gray-900">₹{selectedVariant.price.toLocaleString('en-IN')}</span>
-                    {selectedVariant.originalPrice && (
+                    <span className="text-3xl font-bold text-gray-900">₹{selectedVariant?.price.toLocaleString('en-IN')}</span>
+                    {selectedVariant?.originalPrice && (
                         <>
                         <span className="text-xl text-gray-500 line-through">₹{selectedVariant.originalPrice.toLocaleString('en-IN')}</span>
                         <span className="text-sm font-bold text-green-700 bg-green-100 px-2 py-1 rounded-md">
@@ -416,7 +432,7 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
                         </span>
                         </>
                     )}
-                    {selectedVariant.discountLabel && (
+                    {selectedVariant?.discountLabel && (
                         <span className="text-sm font-bold text-white bg-red-500 px-2 py-1 rounded-md">
                             {selectedVariant.discountLabel}
                         </span>
@@ -426,7 +442,7 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
               </div>
             </div>
             
-            {selectedVariant.specialOffer?.expiry && (
+            {selectedVariant?.specialOffer?.expiry && (
                 <div className="my-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center gap-4">
                     <span className="font-bold text-red-600 text-sm animate-pulse">Offer ends in:</span>
                     <CountdownTimer expiry={selectedVariant.specialOffer.expiry} />
@@ -436,17 +452,17 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
             <div className="space-y-4">
                 {Object.entries(options).map(([key, values]) => (
                     <div key={key}>
-                        <h3 className="text-sm font-semibold text-gray-800 mb-2">{key}: <span className="font-normal text-gray-700">{selectedVariant.attributes[key as keyof typeof selectedVariant.attributes]}</span></h3>
+                        <h3 className="text-sm font-semibold text-gray-800 mb-2">{key}: <span className="font-normal text-gray-700">{selectedVariant?.attributes[key as keyof typeof selectedVariant.attributes]}</span></h3>
                         <div className="flex flex-wrap gap-2">
                             {values.map(({ value, colorCode }) =>
                                 key === 'Color' ? (
                                      <button 
                                         key={value}
                                         onClick={() => handleOptionSelect(key, value)}
-                                        className={`w-8 h-8 rounded-full border-2 transition-transform transform hover:scale-110 ${selectedVariant.attributes.Color === value ? 'border-white' : 'border-gray-300'}`}
+                                        className={`w-8 h-8 rounded-full border-2 transition-transform transform hover:scale-110 ${selectedVariant?.attributes.Color === value ? 'border-white' : 'border-gray-300'}`}
                                         style={{ 
                                             backgroundColor: colorCode,
-                                            ...(selectedVariant.attributes.Color === value && {
+                                            ...(selectedVariant?.attributes.Color === value && {
                                                 boxShadow: `0 0 0 2px white, 0 0 0 4px ${colorCode || '#007bff'}`
                                             })
                                         }}
@@ -456,7 +472,7 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
                                     <button
                                         key={value}
                                         onClick={() => handleOptionSelect(key, value)}
-                                        className={`px-4 py-1 border rounded-md text-sm font-medium transition-colors ${selectedVariant.attributes[key as keyof typeof selectedVariant.attributes] === value ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}
+                                        className={`px-4 py-1 border rounded-md text-sm font-medium transition-colors ${selectedVariant?.attributes[key as keyof typeof selectedVariant.attributes] === value ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}
                                     >
                                         {value}
                                     </button>
@@ -547,10 +563,10 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
                       <span>{value}</span>
                     </li>
                   ))}
-                   {selectedVariant.attributes.Storage && (
+                   {selectedVariant?.attributes.Storage && (
                      <li className="grid grid-cols-2"><span className="font-medium capitalize text-gray-600">Storage:</span><span>{selectedVariant.attributes.Storage}</span></li>
                    )}
-                   {selectedVariant.attributes.RAM && (
+                   {selectedVariant?.attributes.RAM && (
                      <li className="grid grid-cols-2"><span className="font-medium capitalize text-gray-600">RAM:</span><span>{selectedVariant.attributes.RAM}</span></li>
                    )}
                 </ul>
@@ -590,9 +606,9 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
             {currentUser && (
               <AddReviewForm productId={product.id} onAddReview={onAddReview} addToast={addToast} />
             )}
-            {product.reviews && Array.isArray(product.reviews) && product.reviews.length > 0 ? (
+            {reviews.length > 0 ? (
                 // FIX: Added an explicit type assertion `as Review[]`. The TypeScript compiler was failing to infer that `product.reviews` is an array despite the `Array.isArray` check, causing a "Property 'map' does not exist" error. This assertion resolves the type mismatch.
-                (product.reviews as Review[]).map((review: Review) => (
+                (reviews as Review[]).map((review: Review) => (
                     <div key={review.id} className="bg-gray-50 p-4 rounded-lg mb-4 border border-gray-200">
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="font-semibold text-gray-800">{review.author}</h3>

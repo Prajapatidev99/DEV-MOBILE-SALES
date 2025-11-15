@@ -27,14 +27,14 @@ export interface Review {
   date: string;
 }
 
-export type ProductCategory = "Smartphones" | "Smartwatches" | "Accessories";
+export type ProductCategory = "Smartphones" | "Smartwatches" | "Accessories" | "Refurbished Phones";
 
 export interface ProductVariant {
   id: string; // A unique identifier for the variant, e.g., "product-1-blue-128gb"
   sellerPrice: number; // The price set by the shopkeeper/seller
   price: number; // The final price shown to the customer (sellerPrice + profit)
   originalPrice?: number;
-  imageUrl?: string; // Optional: specific image for this variant
+  imagePublicId?: string; // Optional: specific image for this variant
   attributes: {
     Color?: string;
     Storage?: string;
@@ -52,7 +52,7 @@ export interface ProductVariant {
 export interface Product {
   id: number;
   name:string;
-  imageUrls: string[]; // General gallery images
+  imagePublicIds: string[]; // General gallery images
   rating: number;
   description: string;
   brand: string;
@@ -206,7 +206,7 @@ export interface DisplayableProduct {
   uniqueId: string;
   parentId: number;
   name: string;
-  imageUrl: string;
+  imagePublicId: string;
   price: number;
   originalPrice?: number;
   rating: number;
@@ -224,7 +224,7 @@ export interface FocalPoint {
 
 export interface HeroBannerConfig {
   title: string;
-  imageUrl: string;
+  imagePublicId: string;
   focalPoint?: FocalPoint;
 }
 
@@ -232,7 +232,7 @@ export interface PromoBannerConfig {
   id: number;
   title: string;
   subtitle: string;
-  imageUrl: string;
+  imagePublicId: string;
   link: string;
   focalPoint?: FocalPoint;
 }

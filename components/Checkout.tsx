@@ -2,6 +2,7 @@
 import * as React from 'react';
 import type { CartItem, Order, Store, User, Address, Coupon } from '../types';
 import AddressSelectionModal from './AddressSelectionModal';
+import ImageResolver from './ImageResolver';
 
 // FIX: Updated CheckoutProps to include the 'userLocation' prop and widened the type definition for 'onPlaceOrder' to match the props being passed from the App component, resolving the type mismatch error.
 interface CheckoutProps {
@@ -215,10 +216,18 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, subtotal, shippingCost, 
                     <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                         <h3 className="text-2xl font-bold mb-4">Order Summary</h3>
                         <div className="space-y-3 max-h-48 overflow-y-auto custom-scrollbar pr-2">
-                            {cartItems.map(item => (
+                            {cartItems.map(item => {
+                                const imagePublicId = item.variant.imagePublicId || (item.product.imagePublicIds && item.product.imagePublicIds.length > 0 ? item.product.imagePublicIds[0] : '');
+                                return (
                                 <div key={item.variant.id} className="flex justify-between items-start">
                                     <div className="flex items-center">
-                                        <img src={item.variant.imageUrl || item.product.imageUrls[0]} alt={item.product.name} className="w-12 h-12 rounded-md object-cover mr-3" loading="lazy"/>
+                                        <ImageResolver 
+                                            publicId={imagePublicId} 
+                                            alt={item.product.name}
+                                            width={100} 
+                                            className="w-12 h-12 rounded-md object-cover mr-3" 
+                                            loading="lazy"
+                                        />
                                         <div>
                                             <p className="font-semibold text-sm">{item.product.name}</p>
                                             <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
@@ -226,7 +235,8 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, subtotal, shippingCost, 
                                     </div>
                                     <span className="font-semibold text-sm">₹{(item.variant.price * item.quantity).toLocaleString('en-IN')}</span>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         <div className="mt-4 pt-4 border-t">
                             <label htmlFor="coupon" className="font-semibold text-sm text-gray-700">Coupon Code</label>
@@ -313,13 +323,8 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, subtotal, shippingCost, 
                                 Cancel
                             </button>
                         </div>
-                        <button type="submit" disabled={isLoading} className="w-full bg-yellow-400 text-black font-bold py-3 rounded-lg transition-colors hover:bg-yellow-500 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center">
-                            {isLoading ? (
-                                <>
-                                    <span className="spinner-border mr-2" role="status" aria-hidden="true"></span>
-                                    Processing...
-                                </>
-                            ) : 'Proceed to Secure Payment'}
+                        <button type="submit" disabled={isLoading} className="w-full bg-yellow-400 text-black font-bold py-3 rounded-lg transition-colors hover:bg-yellow-500 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                            {isLoading ? 'Processing...' : 'Proceed to Secure Payment'}
                         </button>
                     </div>
                 </div>

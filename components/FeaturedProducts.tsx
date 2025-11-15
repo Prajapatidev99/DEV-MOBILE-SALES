@@ -1,19 +1,17 @@
 // FIX: Changed React import to `import * as React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
 import * as React from 'react';
-import type { Product, ProductVariant } from '../types';
+import type { Product } from '../types';
 import ProductCard from './ProductCard';
 
+// FIX: Removed unused props (onNotifyMe, notificationList, compareList, onToggleCompare) as they are not accepted by the ProductCard component.
 interface FeaturedProductsProps {
   products: Product[];
   onToggleLike: (productId: number) => void;
   likedItems: number[];
-  onNotifyMe: (productId: number) => void;
-  notificationList: number[];
-  compareList: number[];
-  onToggleCompare: (productId: number) => void;
+  onClose?: () => void;
 }
 
-const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ products, onToggleLike, likedItems, onNotifyMe, notificationList, compareList, onToggleCompare }) => {
+const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ products, onToggleLike, likedItems }) => {
   return (
     <div className="my-16">
       <h2 className="text-3xl font-bold text-center mb-8 text-gray-100">Featured Products</h2>
@@ -24,14 +22,11 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ products, onToggleL
             className="flex-shrink-0 w-80 animate-fade-in-up"
             style={{ animationDelay: `${index * 150}ms` }}
           >
+            {/* FIX: Replaced the invalid 'isLiked' prop with 'likedItems' and removed other extraneous props not accepted by ProductCard. ProductCard calculates the liked status internally from the likedItems array. */}
             <ProductCard 
               product={product}
               onToggleLike={onToggleLike}
-              isLiked={likedItems.includes(product.id)}
-              onNotifyMe={onNotifyMe}
-              notificationList={notificationList}
-              compareList={compareList}
-              onToggleCompare={onToggleCompare}
+              likedItems={likedItems}
             />
           </div>
         ))}

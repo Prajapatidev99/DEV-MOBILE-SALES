@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
 import type { Product, ProductCategory, ProductVariant, User, Store } from '../types';
 
 // --- Price Calculation ---
@@ -32,7 +31,7 @@ const emptyVariant: Omit<ProductVariant, 'id' | 'inventory'> = {
 const initialProductState: Omit<Product, 'id' | 'reviews'> = {
     name: '',
     category: 'Smartphones',
-    imageUrls: [''],
+    imagePublicIds: [''],
     rating: 4.5,
     description: '',
     brand: '',
@@ -76,23 +75,22 @@ const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ isOpen, onClose
         setIsFetching(true);
         setFetchError(null);
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const schema = {
-                type: Type.OBJECT,
+                type: 'OBJECT',
                 properties: {
-                    name: { type: Type.STRING, description: "The full official name of the product, including model and variant if available." },
-                    brand: { type: Type.STRING, description: "The brand of the product (e.g., Apple, Samsung)." },
-                    description: { type: Type.STRING, description: "A detailed and accurate product description, often found in the 'About this item' section." },
-                    imageUrl: { type: Type.STRING, description: "The direct, high-resolution URL of the main product image. Must end in .jpg, .png, .webp, etc." },
+                    name: { type: 'STRING', description: "The full official name of the product, including model and variant if available." },
+                    brand: { type: 'STRING', description: "The brand of the product (e.g., Apple, Samsung)." },
+                    description: { type: 'STRING', description: "A detailed and accurate product description, often found in the 'About this item' section." },
+                    imageUrl: { type: 'STRING', description: "The direct, high-resolution URL of the main product image. Must end in .jpg, .png, .webp, etc." },
                     specifications: {
-                        type: Type.OBJECT,
+                        type: 'OBJECT',
                         properties: {
-                            display: { type: Type.STRING, description: "e.g., 6.7-inch Super Retina XDR display" },
-                            camera: { type: Type.STRING, description: "e.g., 48MP Main, 12MP Ultra Wide" },
-                            processor: { type: Type.STRING, description: "e.g., A17 Bionic chip" },
-                            battery: { type: Type.STRING, description: "e.g., Up to 29 hours video playback" },
-                            RAM: { type: Type.STRING, description: "The amount of RAM, e.g., '8GB'. If multiple, pick the most common one." },
-                            Storage: { type: Type.STRING, description: "The amount of internal storage, e.g., '256GB'. If multiple, pick the most common one." }
+                            display: { type: 'STRING', description: "e.g., 6.7-inch Super Retina XDR display" },
+                            camera: { type: 'STRING', description: "e.g., 48MP Main, 12MP Ultra Wide" },
+                            processor: { type: 'STRING', description: "e.g., A17 Bionic chip" },
+                            battery: { type: 'STRING', description: "e.g., Up to 29 hours video playback" },
+                            RAM: { type: 'STRING', description: "The amount of RAM, e.g., '8GB'. If multiple, pick the most common one." },
+                            Storage: { type: 'STRING', description: "The amount of internal storage, e.g., '256GB'. If multiple, pick the most common one." }
                         },
                     },
                 },
@@ -113,45 +111,58 @@ const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ isOpen, onClose
 
             Respond ONLY with the single JSON object that matches the schema. Do not include any surrounding text, explanations, or markdown formatting like \`\`\`json.`;
 
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: prompt,
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: schema,
-                },
-            });
-
-            const jsonString = response.text;
-            const fetchedData = JSON.parse(jsonString);
-
-            setProductData(prev => {
-                const newProductData = {
-                    ...prev,
-                    name: fetchedData.name || prev.name,
-                    brand: fetchedData.brand || prev.brand,
-                    description: fetchedData.description || prev.description,
-                    imageUrls: [fetchedData.imageUrl || prev.imageUrls[0] || ''],
-                    specifications: {
-                        ...prev.specifications,
-                        ...fetchedData.specifications,
+            const backendUrl = 'http://localhost:3001';
+            const proxyResponse = await fetch(`${backendUrl}/api/generate-content`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt,
+                    config: {
+                        responseMimeType: "application/json",
+                        responseSchema: schema,
                     },
-                };
-
-                // If we have variants and the AI found RAM/Storage, pre-fill the first variant
-                if (newProductData.variants.length > 0 && fetchedData.specifications) {
-                    const firstVariant = { ...newProductData.variants[0] };
-                    if (fetchedData.specifications.RAM) {
-                        firstVariant.attributes.RAM = fetchedData.specifications.RAM;
-                    }
-                    if (fetchedData.specifications.Storage) {
-                        firstVariant.attributes.Storage = fetchedData.specifications.Storage;
-                    }
-                    newProductData.variants[0] = firstVariant;
-                }
-
-                return newProductData;
+                }),
             });
+
+            if (!proxyResponse.ok) {
+                const errorData = await proxyResponse.json();
+                throw new Error(errorData.message || 'Failed to fetch from backend proxy.');
+            }
+
+            const data = await proxyResponse.json();
+            
+            if (data.success && data.text) {
+                const fetchedData = JSON.parse(data.text);
+                setProductData(prev => {
+                    const newProductData = {
+                        ...prev,
+                        name: fetchedData.name || prev.name,
+                        brand: fetchedData.brand || prev.brand,
+                        description: fetchedData.description || prev.description,
+                        imagePublicIds: [fetchedData.imageUrl || (prev.imagePublicIds && prev.imagePublicIds[0]) || ''],
+                        specifications: {
+                            ...prev.specifications,
+                            ...fetchedData.specifications,
+                        },
+                    };
+
+                    // If we have variants and the AI found RAM/Storage, pre-fill the first variant
+                    if (newProductData.variants.length > 0 && fetchedData.specifications) {
+                        const firstVariant = { ...newProductData.variants[0] };
+                        if (fetchedData.specifications.RAM) {
+                            firstVariant.attributes.RAM = fetchedData.specifications.RAM;
+                        }
+                        if (fetchedData.specifications.Storage) {
+                            firstVariant.attributes.Storage = fetchedData.specifications.Storage;
+                        }
+                        newProductData.variants[0] = firstVariant;
+                    }
+
+                    return newProductData;
+                });
+            } else {
+                throw new Error(data.message || "Invalid response from backend.");
+            }
 
         } catch (error) {
             console.error("Error fetching product data:", error);
@@ -192,6 +203,8 @@ const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ isOpen, onClose
                 const sellerPrice = Number(value) || 0;
                 variantToUpdate.sellerPrice = sellerPrice;
                 variantToUpdate.price = calculateCustomerPrice(sellerPrice);
+            } else if (field === 'imagePublicId') {
+                variantToUpdate.imagePublicId = value as string;
             } else {
                 (variantToUpdate as any)[field] = value;
             }
@@ -279,8 +292,8 @@ const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ isOpen, onClose
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div><label htmlFor="name" className={labelClasses}>Product Name</label><input type="text" id="name" name="name" value={productData.name} onChange={handleInputChange} className={inputClasses} required /></div>
                                 <div><label htmlFor="brand" className={labelClasses}>Brand</label><input type="text" id="brand" name="brand" value={productData.brand} onChange={handleInputChange} className={inputClasses} required /></div>
-                                <div><label htmlFor="category" className={labelClasses}>Category</label><select id="category" name="category" value={productData.category} onChange={handleInputChange} className={inputClasses}><option value="Smartphones">Smartphones</option><option value="Smartwatches">Smartwatches</option><option value="Accessories">Accessories</option></select></div>
-                                <div><label htmlFor="imageUrls" className={labelClasses}>Main Image URL</label><input type="url" id="imageUrls" name="imageUrls" value={productData.imageUrls[0]} onChange={(e) => setProductData(p => ({...p, imageUrls: [e.target.value]}))} className={inputClasses} /></div>
+                                <div><label htmlFor="category" className={labelClasses}>Category</label><select id="category" name="category" value={productData.category} onChange={handleInputChange} className={inputClasses}><option value="Smartphones">Smartphones</option><option value="Smartwatches">Smartwatches</option><option value="Accessories">Accessories</option><option value="Refurbished Phones">Refurbished Phones</option></select></div>
+                                <div><label htmlFor="imagePublicIds" className={labelClasses}>Main Image Public ID</label><input type="text" id="imagePublicIds" name="imagePublicIds" value={(productData.imagePublicIds && productData.imagePublicIds[0]) || ''} onChange={(e) => setProductData(p => ({...p, imagePublicIds: [e.target.value]}))} className={inputClasses} /></div>
                             </div>
                             <div><label htmlFor="description" className={labelClasses}>Description</label><textarea id="description" name="description" value={productData.description} onChange={handleInputChange} rows={3} className={inputClasses}></textarea></div>
                             <div><label htmlFor="image360Urls" className={labelClasses}>360° Image URLs (comma-separated)</label><textarea id="image360Urls" name="image360Urls" value={productData.image360Urls?.join(', ') || ''} onChange={handle360UrlsChange} rows={2} className={inputClasses} placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg, ..."></textarea></div>
@@ -324,7 +337,7 @@ const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ isOpen, onClose
                                                 </div>
                                                 <input placeholder="Original Price (for discount)" type="number" value={variant.originalPrice || ''} onChange={e => handleVariantChange(index, 'originalPrice', Number(e.target.value))} className={inputClasses} />
                                                 
-                                                <input placeholder="Variant Image URL" value={variant.imageUrl || ''} onChange={e => handleVariantChange(index, 'imageUrl', e.target.value)} className={`${inputClasses} col-span-2 sm:col-span-1`} />
+                                                <input placeholder="Variant Image Public ID" value={variant.imagePublicId || ''} onChange={e => handleVariantChange(index, 'imagePublicId', e.target.value)} className={`${inputClasses} col-span-2 sm:col-span-1`} />
                                                 <input placeholder="Discount Label (e.g., Sale)" value={variant.discountLabel || ''} onChange={e => handleVariantChange(index, 'discountLabel', e.target.value)} className={`${inputClasses} col-span-2 sm:col-span-1`} />
                                             </div>
 
@@ -335,19 +348,20 @@ const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ isOpen, onClose
                                                         {allStores.map(store => {
                                                             const inventoryItem = (variant.inventory || []).find(i => i.storeId === store.id);
                                                             return (
-                                                                <div key={store.id}>
-                                                                    <label className="text-sm text-gray-600">{store.name}</label>
-                                                                    <input type="number" placeholder="Qty" value={inventoryItem?.quantity || ''} onChange={e => handleInventoryChange(index, store.id, e.target.value)} className={`${inputClasses} p-1 text-sm`} />
+                                                                <div key={store.id} className="flex items-center gap-2">
+                                                                    <label htmlFor={`inv-${variant.id}-${store.id}`} className="text-sm text-gray-600 truncate">{store.name}</label>
+                                                                    <input id={`inv-${variant.id}-${store.id}`} type="number" value={inventoryItem?.quantity || ''} onChange={e => handleInventoryChange(index, store.id, e.target.value)} className={`${inputClasses} w-20`} />
                                                                 </div>
-                                                            )
+                                                            );
                                                         })}
                                                     </div>
-                                                ) : currentUser.storeId ? (
-                                                     <div>
-                                                        <label className="text-sm text-gray-600">Your Store Quantity</label>
-                                                        <input type="number" placeholder="Qty" value={(variant.inventory || []).find(i => i.storeId === currentUser.storeId)?.quantity || ''} onChange={e => handleInventoryChange(index, currentUser.storeId!, e.target.value)} className={`${inputClasses} p-1 text-sm max-w-xs`} />
+                                                ) : (
+                                                    // Seller view
+                                                    <div>
+                                                        <label htmlFor={`inv-${variant.id}-${currentUser.storeId}`} className="text-sm text-gray-600">Stock for your store</label>
+                                                        <input id={`inv-${variant.id}-${currentUser.storeId}`} type="number" value={(variant.inventory || []).find(i => i.storeId === currentUser.storeId)?.quantity || ''} onChange={e => handleInventoryChange(index, currentUser.storeId!, e.target.value)} className={`${inputClasses} w-24`} />
                                                     </div>
-                                                ) : null}
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -355,10 +369,9 @@ const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ isOpen, onClose
                             </div>
                         </div>
                     </div>
-                    <footer className="flex-shrink-0 text-right border-t p-6 bg-gray-50/50 rounded-b-lg">
-                        <button type="submit" className="bg-yellow-400 text-black font-bold py-3 px-8 rounded-md hover:bg-yellow-500 transition-colors duration-300">
-                            Save Product
-                        </button>
+                    <footer className="flex-shrink-0 p-6 flex justify-end items-center border-t bg-gray-50/50">
+                        <button type="button" onClick={onClose} className="mr-4 text-gray-600 font-semibold py-2 px-4 rounded-md hover:bg-gray-200 transition-colors">Cancel</button>
+                        <button type="submit" className="bg-yellow-400 text-black font-bold py-2 px-6 rounded-md hover:bg-yellow-500 transition-colors">Save Product</button>
                     </footer>
                 </form>
             </div>
