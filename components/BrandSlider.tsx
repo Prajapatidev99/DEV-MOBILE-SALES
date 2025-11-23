@@ -8,14 +8,14 @@ interface BrandSliderProps {
 
 // Brand logos mapping
 const brandLogos: { [key: string]: string } = {
-    'All': 'https://img.icons8.com/ios-filled/50/000000/select-all.png',
+    'All': 'https://res.cloudinary.com/dv9z9uaht/image/upload/v1763912007/all_zdxfbs.svg',
     'Apple': 'https://www.vectorlogo.zone/logos/apple/apple-icon.svg',
     'Samsung': 'https://www.vectorlogo.zone/logos/samsung/samsung-icon.svg',
     'Google': 'https://www.vectorlogo.zone/logos/google/google-icon.svg',
-    'OnePlus': 'https://www.vectorlogo.zone/logos/oneplus/oneplus-icon.svg',
+    'OnePlus': 'https://cdn.brandfetch.io/idi46coDvW/theme/dark/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1676970644012',
     'Xiaomi': 'https://www.vectorlogo.zone/logos/xiaomi/xiaomi-icon.svg',
     'Oppo': 'https://www.vectorlogo.zone/logos/oppo/oppo-icon.svg',
-    'Vivo': 'https://www.vectorlogo.zone/logos/vivo/vivo-icon.svg',
+    'Vivo': 'https://iconape.com/vivo-mobile-phones-logo-logo-icon-svg-png.html',
     'Realme': 'https://logowik.com/content/uploads/images/realme-new-20239330.logowik.com.webp',
     'boAt': 'https://www.vectorlogo.zone/logos/boat-lifestyle/boat-lifestyle-icon.svg',
     'Spigen': 'https://iconape.com/wp-content/files/na/31185/svg/spigen.svg',
