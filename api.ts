@@ -37,7 +37,10 @@ import type { Product, User, CartItem, Order, Review, Store, ProductVariant, Hom
 // USE ENVIRONMENT VARIABLES FOR DEPLOYMENT
 // FIX: Cast import.meta to any to resolve TypeScript error 'Property env does not exist on type ImportMeta'.
 export const API_BASE_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:3001';
-const BACKEND_API_SECRET = 'dev-secret';
+const BACKEND_API_SECRET = (import.meta as any).env.VITE_BACKEND_API_SECRET || 'dev-secret';
+
+// DEBUG: Check API URL in production
+console.log('🔌 Connected to API:', API_BASE_URL);
 
 // --- COLLECTION NAMES ---
 const COLLECTIONS = {
@@ -83,7 +86,7 @@ const PRODUCT_IMAGE_IDS: { [key: string]: string } = {
 };
 
 const BANNER_IMAGE_IDS = {
-    hero: 'dev-mobile/s24-ultra-gray_uleqnb',
+    hero: 'hero_btit7z', // Matching the preloaded image from index.html
     promoSmartwatches: 'dev-mobile/promo-smartwatches_l3yqjb',
     promoAccessories: 'dev-mobile/promo-accessories_kpfywy',
     promoNewArrivals: 'dev-mobile/s24-ultra-gray_uleqnb',

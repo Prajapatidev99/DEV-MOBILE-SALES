@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -10,20 +11,16 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- ✅ Secure and compatible CSP -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:3001 https://*.google.com https://*.googleapis.com https://*.facebook.com https://*.fbcdn.net https://*.firebaseio.com wss://*.firebaseio.com https://*.google-analytics.com; script-src 'self' https://www.googletagmanager.com https://ajax.googleapis.com https://www.gstatic.com https://apis.google.com https://www.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: res.cloudinary.com img.icons8.com www.vectorlogo.zone logowik.com iconape.com api.qrserver.com blob: www.googletagmanager.com *.google-analytics.com www.google-analytics.com www.google.com; object-src 'none'; frame-src https://accounts.google.com https://*.facebook.com https://*.firebaseapp.com https://maps.google.com https://www.google.com https://www.googletagmanager.com; upgrade-insecure-requests;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:3001 https://*.onrender.com https://*.google.com https://*.googleapis.com https://*.facebook.com https://*.fbcdn.net https://*.firebaseio.com wss://*.firebaseio.com https://*.google-analytics.com; script-src 'self' https://www.googletagmanager.com https://ajax.googleapis.com https://www.gstatic.com https://apis.google.com https://www.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: res.cloudinary.com img.icons8.com www.vectorlogo.zone logowik.com iconape.com api.qrserver.com blob: www.googletagmanager.com *.google-analytics.com www.google-analytics.com www.google.com; object-src 'none'; frame-src https://accounts.google.com https://*.facebook.com https://*.firebaseapp.com https://maps.google.com https://www.google.com https://www.googletagmanager.com; upgrade-insecure-requests;">
 
-    <!-- ✅ SEO Optimization -->
     <meta name="description" content="DEV MOBILE - Your one-stop shop for the latest smartphones, smartwatches, and accessories. Get the best deals on top brands like Apple, Samsung, Google, and more.">
     <meta name="keywords" content="smartphones, mobile phones, apple, samsung, google pixel, smartwatches, accessories, electronics">
     <title>Dev Mobile</title>
 
-    <!-- ✅ Optimized Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- ✅ Preload LCP Image (Optimized for Mobile) -->
     <link
       rel="preload"
       as="image"
@@ -59,21 +56,16 @@
 </head>
 
   <body class="bg-gray-50 text-gray-800">
-    <!-- ✅ Google Tag Manager (noscript) -->
     <noscript>
       <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WK447QHP"
         height="0" width="0"
         style="display:none;visibility:hidden"></iframe>
     </noscript>
-    <!-- End Google Tag Manager (noscript) -->
 
-    <!-- ✅ React Mount Point -->
     <div id="root"></div>
 
-    <!-- ✅ App Entry -->
     <script type="module" src="/index.tsx" defer></script>
 
-    <!-- ✅ Google Tag Manager -->
     <script>
       (function(w, d, s, l, i) {
         w[l] = w[l] || [];
@@ -85,6 +77,5 @@
         f.parentNode.insertBefore(j, f);
       })(window, document, 'script', 'dataLayer', 'GTM-WK447QHP');
     </script>
-    <!-- ✅ End Google Tag Manager -->
   </body>
 </html>

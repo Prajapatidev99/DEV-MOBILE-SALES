@@ -33,7 +33,12 @@ try {
 // Middleware
 const corsOptions = {
   // In production, set FRONTEND_URL to your app's domain.
-  origin: [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://localhost:3000'],
+  origin: [
+      process.env.FRONTEND_URL || 'http://localhost:5173', 
+      'http://localhost:3000',
+      'https://www.devmobile.shop',
+      'https://devmobile.shop'
+  ],
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
