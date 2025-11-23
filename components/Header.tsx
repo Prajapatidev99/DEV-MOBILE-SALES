@@ -1,5 +1,5 @@
-// FIX: Changed React import to `import * as React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
-import * as React from 'react';
+// FIX: Changed React import to `import React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
+import React from 'react';
 import type { User, Product, Notification, ProductCategory } from '../types';
 import { HeartIcon, ShoppingCartIcon } from './icons';
 import SearchBar from './SearchBar';

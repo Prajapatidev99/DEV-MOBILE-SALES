@@ -1,12 +1,15 @@
-// FIX: Changed React import to `import * as React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
-import * as React from 'react';
-import type { Product, Review, User, ProductVariant, PriceComparison } from '../types';
+import React, { Suspense } from 'react';
+import type { Product, Review, User, ProductVariant } from '../types';
 import { ShoppingCartIcon, StarIcon, CompareIcon } from './icons';
-import RelatedProducts from './RelatedProducts';
-import AddReviewForm from './AddReviewForm';
 import AnimateOnScroll from './AnimateOnScroll';
 import CountdownTimer from './CountdownTimer';
-import ImageResolver, { getCloudinaryUrl } from './ImageResolver';
+
+// Lazy load components to reduce initial bundle size
+const ProductGallery = React.lazy(() => import('./ProductGallery'));
+const ProductSpecifications = React.lazy(() => import('./ProductSpecifications'));
+const PriceComparison = React.lazy(() => import('./PriceComparison'));
+const AddReviewForm = React.lazy(() => import('./AddReviewForm'));
+const RelatedProducts = React.lazy(() => import('./RelatedProducts'));
 
 interface ProductDetailProps {
   product: Product;
@@ -46,71 +49,34 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
     onToggleCompare
 }) => {
   const [selectedVariant, setSelectedVariant] = React.useState<ProductVariant>(() => (product.variants || []).find(v => (v.inventory || []).some(s => s.quantity > 0)) || (product.variants || [])[0]);
-  const [mainImagePublicId, setMainImagePublicId] = React.useState('');
   const [pinCode, setPinCode] = React.useState('');
   const [deliveryStatus, setDeliveryStatus] = React.useState<'idle' | 'checking' | 'available' | 'unavailable'>('idle');
-  const imageRef = React.useRef<HTMLImageElement>(null);
-
-  // 360 viewer state
-  const [viewMode, setViewMode] = React.useState<'gallery' | '360'>('gallery');
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [dragStartX, setDragStartX] = React.useState(0);
-  const [currentFrame, setCurrentFrame] = React.useState(0);
-  
-  // Price comparison state
-  const [comparisonResults, setComparisonResults] = React.useState<PriceComparison[] | null>(null);
-  const [isComparingPrices, setIsComparingPrices] = React.useState(false);
-  const [comparisonError, setComparisonError] = React.useState<string | null>(null);
-
 
   React.useEffect(() => {
     // Reset state when the product changes
     const variants = product.variants || [];
     const initialVariant = variants.find(v => (v.inventory || []).some(s => s.quantity > 0)) || variants[0];
     setSelectedVariant(initialVariant);
-    
-    setViewMode('gallery');
-    setCurrentFrame(0);
     setDeliveryStatus('idle');
     if (userPinCode) setPinCode(userPinCode);
     else setPinCode('');
-    
-    // Reset price comparison on product change
-    setComparisonResults(null);
-    setComparisonError(null);
-    setIsComparingPrices(false);
-
   }, [product.id, userPinCode]);
 
-  React.useEffect(() => {
-    const imageIds = product.imagePublicIds || [];
-    setMainImagePublicId(selectedVariant?.imagePublicId || (imageIds.length > 0 ? imageIds[0] : ''));
-  }, [selectedVariant, product.imagePublicIds]);
-  
-  const options = React.useMemo(() => {
+  const options = React.useMemo<{ [key: string]: { value: string, colorCode?: string }[] }>(() => {
     const allOptions: { [key: string]: { value: string, colorCode?: string }[] } = {};
     (product.variants || []).forEach(variant => {
         Object.entries(variant.attributes).forEach(([key, value]) => {
             if (!value) return;
             if (!allOptions[key]) allOptions[key] = [];
-            if (!allOptions[key].some(o => o.value === value)) {
-                allOptions[key].push({ value, colorCode: key === 'Color' ? variant.colorCode : undefined });
+            const strValue = value as string;
+            if (!allOptions[key].some(o => o.value === strValue)) {
+                allOptions[key].push({ value: strValue, colorCode: key === 'Color' ? variant.colorCode : undefined });
             }
         });
     });
     return allOptions;
   }, [product.variants]);
 
-  const thumbnailPublicIds = React.useMemo(() => {
-    const imageIds = product.imagePublicIds || [];
-    const mainImage = selectedVariant?.imagePublicId || (imageIds.length > 0 ? imageIds[0] : '');
-    const variantImages = (product.variants || [])
-        .map(v => v.imagePublicId)
-        .filter((id): id is string => !!id);
-    const allImages = [mainImage, ...variantImages, ...imageIds];
-    return [...new Set(allImages)];
-  }, [product.variants, product.imagePublicIds, selectedVariant]);
-  
   const handleOptionSelect = (key: string, value: string) => {
     const currentAttributes = { ...selectedVariant.attributes };
     currentAttributes[key as keyof typeof currentAttributes] = value;
@@ -128,16 +94,6 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
     
     setSelectedVariant(bestMatch);
   };
-
-  // Preload 360 images for smooth rotation
-  React.useEffect(() => {
-    if (viewMode === '360' && product.image360Urls) {
-      product.image360Urls.forEach((url: string) => {
-        const img = new Image();
-        img.src = url;
-      });
-    }
-  }, [viewMode, product.image360Urls]);
 
   const handlePinCodeCheck = () => {
     setDeliveryStatus('checking');
@@ -164,100 +120,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
               return null;
       }
   };
-  
-   const handleComparePrices = async () => {
-    setIsComparingPrices(true);
-    setComparisonError(null);
-    setComparisonResults(null);
-    try {
-        const schema = {
-            type: 'ARRAY',
-            items: {
-                type: 'OBJECT',
-                properties: {
-                    platform: { type: 'STRING' },
-                    url: { type: 'STRING' }
-                },
-                required: ['platform', 'url']
-            }
-        };
-        const variantDetails = Object.entries(selectedVariant.attributes)
-            .filter(([, value]) => value)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join(', ');
-            
-        const prompt = `You are an expert price comparison assistant for electronics in India. Your goal is to generate a direct search URL for a specific product variant on major e-commerce sites.
-
-Product Name: "${product.name}"
-Variant Details: "${variantDetails}"
-
-Based on this, create a search URL for this exact product on amazon.in and flipkart.com. The URL should take the user to the search results page for that product. For example, for a "Samsung Galaxy S24" on Amazon, the URL should be something like "https://www.amazon.in/s?k=Samsung+Galaxy+S24".
-
-Respond ONLY with the JSON object that matches the provided schema. If you cannot generate a URL for a platform, omit it from the result array.`;
-
-        const backendUrl = 'http://localhost:3001';
-        const proxyResponse = await fetch(`${backendUrl}/api/generate-content`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                prompt,
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: schema,
-                },
-            }),
-        });
-        
-        if (!proxyResponse.ok) {
-            const errorData = await proxyResponse.json();
-            throw new Error(errorData.message || 'Failed to fetch from backend proxy.');
-        }
-
-        const data = await proxyResponse.json();
-
-        if (data.success && data.text) {
-            const results = JSON.parse(data.text) as PriceComparison[];
-            setComparisonResults(results);
-        } else {
-             throw new Error(data.message || "Invalid response from backend.");
-        }
-
-    } catch (error) {
-        console.error("Error fetching price comparison links:", error);
-        setComparisonError("Sorry, we couldn't generate search links at this time.");
-    } finally {
-        setIsComparingPrices(false);
-    }
-  };
-
 
   const reviews = product.reviews || [];
   const averageRating = reviews.length > 0
     ? (reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length).toFixed(1)
     : product.rating.toFixed(1);
-
-  // 360 Viewer Drag Handlers
-  const totalFrames = product.image360Urls?.length || 0;
-
-  const handle360DragStart = (clientX: number) => {
-      setIsDragging(true);
-      setDragStartX(clientX);
-  };
-
-  const handle360DragMove = (clientX: number) => {
-      if (!isDragging || totalFrames <= 1) return;
-      const dragDelta = clientX - dragStartX;
-      const sensitivity = 8; // Lower is more sensitive
-      const frameDelta = Math.floor(dragDelta / sensitivity);
-
-      if (Math.abs(frameDelta) > 0) {
-          const nextFrame = (currentFrame - frameDelta + totalFrames) % totalFrames;
-          setCurrentFrame(nextFrame);
-          setDragStartX(clientX);
-      }
-  };
-
-  const handle360DragEnd = () => setIsDragging(false);
 
     const ShareButtons: React.FC = () => {
         const url = window.location.href;
@@ -292,106 +159,14 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
   const isInCompare = compareList.includes(product.id);
   const isInStock = selectedVariant && (selectedVariant.inventory || []).some(s => s.quantity > 0);
 
-  const structuredData = {
-    '@context': 'https://schema.org/',
-    '@type': 'Product',
-    name: product.name,
-    image: (product.imagePublicIds || []).map(id => getCloudinaryUrl(id, 1200)),
-    description: product.description,
-    brand: {
-      '@type': 'Brand',
-      name: product.brand,
-    },
-    sku: product.id.toString(),
-    offers: {
-      '@type': 'AggregateOffer',
-      priceCurrency: 'INR',
-      lowPrice: Math.min(...(product.variants || []).map(v => v.price)),
-      highPrice: Math.max(...(product.variants || []).map(v => v.price)),
-      offerCount: (product.variants || []).length,
-    },
-    ...(reviews.length > 0 && {
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: averageRating,
-        reviewCount: reviews.length,
-      }
-    })
-  };
-
   return (
     <div className="text-gray-800">
-      <script type="application/ld+json">
-        {JSON.stringify(structuredData)}
-      </script>
       <div className="bg-white p-4 md:p-8 rounded-lg shadow-md border border-gray-200">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
           
-          <div className="relative group">
-            <div className="animate-float">
-                {viewMode === 'gallery' ? (
-                  <div 
-                    className="relative w-full aspect-square overflow-hidden rounded-lg shadow-sm border border-gray-200 mb-4"
-                  >
-                    <ImageResolver 
-                      ref={imageRef}
-                      publicId={mainImagePublicId}
-                      alt={product.name}
-                      className="w-full h-full object-contain transition-all duration-300 group-hover:scale-110"
-                      loading="lazy"
-                      decoding="async"
-                      key={mainImagePublicId} // Force re-render on image change
-                    />
-                  </div>
-                ) : (
-                  <div className="relative w-full aspect-square overflow-hidden rounded-lg shadow-sm border border-gray-200 mb-4 cursor-grab active:cursor-grabbing"
-                    onMouseDown={(e) => handle360DragStart(e.clientX)}
-                    onMouseMove={(e) => handle360DragMove(e.clientX)}
-                    onMouseUp={handle360DragEnd}
-                    onMouseLeave={handle360DragEnd}
-                    onTouchStart={(e) => handle360DragStart(e.touches[0].clientX)}
-                    onTouchMove={(e) => handle360DragMove(e.touches[0].clientX)}
-                    onTouchEnd={handle360DragEnd}
-                  >
-                    <img 
-                      ref={imageRef}
-                      src={product.image360Urls?.[currentFrame]}
-                      alt={`${product.name} 360 view`}
-                      className="w-full h-full object-contain"
-                      draggable="false"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="text-white bg-black/50 px-4 py-2 rounded-lg">Drag to rotate</p>
-                    </div>
-                  </div>
-                )}
-            </div>
-            
-            {product.image360Urls && product.image360Urls.length > 0 && (
-                <div className="absolute top-2 left-2 z-10 bg-white/80 backdrop-blur-sm rounded-full p-1 flex items-center text-sm">
-                    <button onClick={() => setViewMode('gallery')} className={`px-3 py-1 rounded-full transition-colors ${viewMode === 'gallery' ? 'bg-blue-600 text-white shadow' : 'text-gray-700'}`}>Gallery</button>
-                    <button onClick={() => setViewMode('360')} className={`px-3 py-1 rounded-full transition-colors ${viewMode === '360' ? 'bg-blue-600 text-white shadow' : 'text-gray-700'}`}>360°</button>
-                </div>
-            )}
-
-            {viewMode === 'gallery' && (
-              <div className="flex space-x-2 overflow-x-auto custom-scrollbar pb-2">
-                {thumbnailPublicIds.map((publicId, index) => (
-                  <img
-                    key={index}
-                    src={getCloudinaryUrl(publicId, 100)}
-                    alt={`${product.name} thumbnail ${index + 1}`}
-                    onClick={() => setMainImagePublicId(publicId)}
-                    className={`w-16 h-16 object-contain rounded-md cursor-pointer border-2 p-1 transition-all flex-shrink-0 ${mainImagePublicId === publicId ? 'border-blue-500' : 'border-gray-200 hover:border-gray-400'}`}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          <Suspense fallback={<div className="w-full aspect-square bg-gray-200 rounded-lg animate-pulse"></div>}>
+            <ProductGallery product={product} selectedVariant={selectedVariant} />
+          </Suspense>
 
           <div>
             <div className="flex justify-between items-start">
@@ -472,7 +247,7 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
                                     <button
                                         key={value}
                                         onClick={() => handleOptionSelect(key, value)}
-                                        className={`px-4 py-1 border rounded-md text-sm font-medium transition-colors ${selectedVariant?.attributes[key as keyof typeof selectedVariant.attributes] === value ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}
+                                        className={`px-4 py-1 border rounded-md text-sm font-medium transition-colors ${selectedVariant?.attributes[key as keyof typeof selectedVariant.attributes] === value ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-50'}`}
                                     >
                                         {value}
                                     </button>
@@ -486,92 +261,45 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
 
             <p className="text-gray-700 mt-4 mb-6 leading-relaxed">{product.description}</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
-              {isInStock ? (
-                  <button
-                    onClick={(e) => onAddToCart(product, selectedVariant, e)}
-                    className="CartBtn CartBtn-lg w-full sm:col-span-3"
-                  >
-                    <span className="IconContainer">
-                        <ShoppingCartIcon className="icon text-gray-900" />
-                    </span>
-                    <span className="text">Add to Cart</span>
-                  </button>
-              ) : (
-                  <button
-                    onClick={() => onNotifyMe(product.id)}
-                    disabled={notificationList.includes(product.id)}
-                    className="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-md hover:bg-blue-700 transition-transform transform hover:scale-105 duration-300 flex items-center justify-center text-lg disabled:bg-gray-400 disabled:cursor-not-allowed sm:col-span-3"
-                  >
-                    {notificationList.includes(product.id) 
-                      ? <><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> On the List</>
-                      : <><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>Notify Me</>
-                    }
-                  </button>
-              )}
-               <button onClick={handleComparePrices} disabled={isComparingPrices} className="w-full bg-gray-800 text-white font-bold py-3 px-6 rounded-md hover:bg-black transition-transform transform hover:scale-105 duration-300 flex items-center justify-center text-lg disabled:bg-gray-400 sm:col-span-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    Check Live Prices
-                </button>
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6 items-start">
+               <div className="sm:col-span-3 w-full">
+                  {isInStock ? (
+                      <button
+                        onClick={(e) => onAddToCart(product, selectedVariant, e)}
+                        className="CartBtn CartBtn-lg w-full"
+                      >
+                        <span className="IconContainer">
+                            <ShoppingCartIcon className="icon text-gray-900" />
+                        </span>
+                        <span className="text">Add to Cart</span>
+                      </button>
+                  ) : (
+                      <button
+                        onClick={() => onNotifyMe(product.id)}
+                        disabled={notificationList.includes(product.id)}
+                        className="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-md hover:bg-blue-700 transition-transform transform hover:scale-105 duration-300 flex items-center justify-center text-lg disabled:bg-gray-400 disabled:cursor-not-allowed h-[52px]"
+                      >
+                        {notificationList.includes(product.id) 
+                          ? <><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> On the List</>
+                          : <><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>Notify Me</>
+                        }
+                      </button>
+                  )}
+               </div>
+               <div className="sm:col-span-2 w-full">
+                 <Suspense fallback={<button disabled className="w-full bg-gray-200 text-gray-400 font-bold py-3 px-6 rounded-md flex items-center justify-center h-[52px]">Loading...</button>}>
+                    <PriceComparison product={product} selectedVariant={selectedVariant} />
+                 </Suspense>
+               </div>
             </div>
             
             <ShareButtons />
             
-            {(isComparingPrices || comparisonResults || comparisonError) && (
+            <Suspense fallback={<div className="h-32 bg-gray-100 rounded-lg my-6 animate-pulse"></div>}>
               <AnimateOnScroll>
-                <div className="bg-gray-50 p-4 rounded-lg mt-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Check Live Prices</h3>
-                    <p className="text-xs text-gray-500 mb-3">For: {product.name} ({Object.values(selectedVariant.attributes).filter(Boolean).join(' / ')})</p>
-                    {isComparingPrices && (
-                        <div className="space-y-3 animate-pulse">
-                          <div className="h-10 bg-gray-200 rounded w-full"></div>
-                          <div className="h-10 bg-gray-200 rounded w-full"></div>
-                        </div>
-                    )}
-                    {comparisonError && <p className="text-red-600">{comparisonError}</p>}
-                    {comparisonResults && (
-                        <div className="space-y-3">
-                          {comparisonResults.map(result => (
-                              <a 
-                                key={result.platform} 
-                                href={result.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="flex items-center justify-between text-sm bg-white p-3 rounded-md border hover:bg-gray-50 transition-colors"
-                              >
-                                <span className="font-semibold text-blue-600 capitalize">Check on {result.platform}</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                              </a>
-                          ))}
-                           <div className="flex items-start gap-2 text-xs text-gray-500 pt-2 border-t mt-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                <span>AI-generated links to help you find the best price. Please verify all details on the retailer's site.</span>
-                           </div>
-                        </div>
-                    )}
-                </div>
+                <ProductSpecifications product={product} selectedVariant={selectedVariant} />
               </AnimateOnScroll>
-            )}
-            
-             <AnimateOnScroll>
-              <div className="bg-gray-50 p-4 rounded-lg my-6 border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">Specifications</h3>
-                <ul className="space-y-2 text-gray-700 text-sm">
-                  {Object.entries(product.specifications).map(([key, value]) => (
-                    <li key={key} className="grid grid-cols-2">
-                      <span className="font-medium capitalize text-gray-600">{key}:</span>
-                      <span>{value}</span>
-                    </li>
-                  ))}
-                   {selectedVariant?.attributes.Storage && (
-                     <li className="grid grid-cols-2"><span className="font-medium capitalize text-gray-600">Storage:</span><span>{selectedVariant.attributes.Storage}</span></li>
-                   )}
-                   {selectedVariant?.attributes.RAM && (
-                     <li className="grid grid-cols-2"><span className="font-medium capitalize text-gray-600">RAM:</span><span>{selectedVariant.attributes.RAM}</span></li>
-                   )}
-                </ul>
-              </div>
-            </AnimateOnScroll>
+            </Suspense>
 
             <AnimateOnScroll>
               <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200 space-y-4">
@@ -604,10 +332,11 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
         <AnimateOnScroll className="mt-12 pt-8 border-t border-gray-200">
             <h2 className="text-3xl font-bold text-gray-900 mb-6">Ratings & Reviews</h2>
             {currentUser && (
-              <AddReviewForm productId={product.id} onAddReview={onAddReview} addToast={addToast} />
+              <Suspense fallback={<div className="h-40 bg-gray-100 rounded-lg mb-8 animate-pulse"></div>}>
+                <AddReviewForm productId={product.id} onAddReview={onAddReview} addToast={addToast} />
+              </Suspense>
             )}
             {reviews.length > 0 ? (
-                // FIX: Added an explicit type assertion `as Review[]`. The TypeScript compiler was failing to infer that `product.reviews` is an array despite the `Array.isArray` check, causing a "Property 'map' does not exist" error. This assertion resolves the type mismatch.
                 (reviews as Review[]).map((review: Review) => (
                     <div key={review.id} className="bg-gray-50 p-4 rounded-lg mb-4 border border-gray-200">
                         <div className="flex justify-between items-center mb-2">
@@ -629,17 +358,19 @@ Respond ONLY with the JSON object that matches the provided schema. If you canno
       </div>
 
       {relatedProducts.length > 0 && (
-          <AnimateOnScroll className="mt-16">
-              <RelatedProducts 
-                  products={relatedProducts}
-                  onToggleLike={onToggleLike}
-                  likedItems={likedItems}
-                  onNotifyMe={onNotifyMe}
-                  notificationList={notificationList}
-                  compareList={compareList}
-                  onToggleCompare={onToggleCompare}
-              />
-          </AnimateOnScroll>
+          <Suspense fallback={<div className="h-64 bg-gray-100 rounded-lg mt-16 animate-pulse"></div>}>
+            <AnimateOnScroll className="mt-16">
+                <RelatedProducts 
+                    products={relatedProducts}
+                    onToggleLike={onToggleLike}
+                    likedItems={likedItems}
+                    onNotifyMe={onNotifyMe}
+                    notificationList={notificationList}
+                    compareList={compareList}
+                    onToggleCompare={onToggleCompare}
+                />
+            </AnimateOnScroll>
+          </Suspense>
       )}
     </div>
   );

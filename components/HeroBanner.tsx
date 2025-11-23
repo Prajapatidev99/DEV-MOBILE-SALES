@@ -1,5 +1,6 @@
-// FIX: Changed React import to `import * as React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
-import * as React from 'react';
+
+// FIX: Changed React import to `import React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
+import React from 'react';
 import type { FocalPoint } from '../types';
 import ImageResolver from './ImageResolver';
 
@@ -16,7 +17,10 @@ const HeroBanner: React.FC<HeroBannerProps> = ({ title, imagePublicId, onShopNow
         <div className="relative h-80 bg-gray-800 rounded-lg overflow-hidden mb-4 shadow-sm border border-gray-200 animate-fade-in">
             <ImageResolver 
                 publicId={imagePublicId} 
-                width={1200}
+                width={1600}
+                height={900}
+                crop="fill"
+                sizes="100vw"
                 alt="Promotional banner" 
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{
@@ -25,7 +29,7 @@ const HeroBanner: React.FC<HeroBannerProps> = ({ title, imagePublicId, onShopNow
                 }}
                 loading="eager"
                 decoding="async"
-                fetchPriority="high"
+                fetchpriority="high"
             />
             <div className="relative h-full flex flex-col items-start justify-center text-left p-8 md:p-12 bg-gradient-to-r from-black/60 to-transparent">
                 <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight drop-shadow-lg max-w-md">{title}</h2>

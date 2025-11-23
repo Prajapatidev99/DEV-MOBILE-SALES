@@ -1,6 +1,7 @@
-// FIX: Changed import to `import * as React from 'react'`. This is a more robust way to import the React module and its associated types, ensuring that the `JSX` namespace is available before any augmentations are made. This resolves the widespread issue where TypeScript failed to recognize standard HTML elements.
-// FIX: Changed `import React from 'react'` to `import * as React from 'react'` to ensure proper namespace augmentation for custom elements.
-import * as React from 'react';
+
+// FIX: Changed import to `import React from 'react'`. This is a more robust way to import the React module and its associated types, ensuring that the `JSX` namespace is available before any augmentations are made. This resolves the widespread issue where TypeScript failed to recognize standard HTML elements.
+// FIX: Changed `import * as React from 'react'` to `import React from 'react'` to ensure proper namespace augmentation for custom elements.
+import React from 'react';
 
 // FIX: Replaced a non-functional triple-slash directive with a standard 'import'.
 // The previous directive failed to load React's types, causing the global JSX
@@ -235,6 +236,7 @@ export interface PromoBannerConfig {
   imagePublicId: string;
   link: string;
   focalPoint?: FocalPoint;
+  imageUrl?: string; // Added for backward compatibility/legacy components
 }
 
 export interface HomepageConfig {

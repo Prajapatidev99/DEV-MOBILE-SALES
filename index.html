@@ -1,7 +1,77 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-g" />
+
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- ✅ Secure and compatible CSP -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:3001 https://*.google.com https://*.googleapis.com https://*.facebook.com https://*.fbcdn.net https://*.firebaseio.com wss://*.firebaseio.com https://*.google-analytics.com; script-src 'self' https://www.googletagmanager.com https://ajax.googleapis.com https://www.gstatic.com https://apis.google.com https://www.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: res.cloudinary.com img.icons8.com www.vectorlogo.zone logowik.com iconape.com api.qrserver.com blob: www.googletagmanager.com *.google-analytics.com www.google-analytics.com www.google.com; object-src 'none'; frame-src https://accounts.google.com https://*.facebook.com https://*.firebaseapp.com https://maps.google.com https://www.google.com https://www.googletagmanager.com; upgrade-insecure-requests;">
+
+    <!-- ✅ SEO Optimization -->
+    <meta name="description" content="DEV MOBILE - Your one-stop shop for the latest smartphones, smartwatches, and accessories. Get the best deals on top brands like Apple, Samsung, Google, and more.">
+    <meta name="keywords" content="smartphones, mobile phones, apple, samsung, google pixel, smartwatches, accessories, electronics">
+    <title>Dev Mobile</title>
+
+    <!-- ✅ Optimized Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- ✅ Preload LCP Image (Optimized for Mobile) -->
+    <link
+      rel="preload"
+      as="image"
+      fetchpriority="high"
+      href="https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_1600,h_900,c_fill,g_auto/v1763286299/hero_btit7z.webp"
+      imagesrcset="
+        https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_400,h_225,c_fill,g_auto/v1763286299/hero_btit7z.webp 400w,
+        https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_800,h_450,c_fill,g_auto/v1763286299/hero_btit7z.webp 800w,
+        https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_1200,h_675,c_fill,g_auto/v1763286299/hero_btit7z.webp 1200w,
+        https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_1600,h_900,c_fill,g_auto/v1763286299/hero_btit7z.webp 1600w
+      "
+      imagesizes="100vw"
+      type="image/webp"
+    />
+
+
+    <link rel="stylesheet" href="/styles/main.css">
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "vite": "https://aistudiocdn.com/vite@^7.2.2",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "@firebase/auth": "https://aistudiocdn.com/@firebase/auth@^1.11.1",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/",
+    "@firebase/app": "https://aistudiocdn.com/@firebase/app@^0.14.6",
+    "@firebase/analytics": "https://aistudiocdn.com/@firebase/analytics@^0.10.19"
+  }
+}
+</script>
+</head>
+
+  <body class="bg-gray-50 text-gray-800">
+    <!-- ✅ Google Tag Manager (noscript) -->
+    <noscript>
+      <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WK447QHP"
+        height="0" width="0"
+        style="display:none;visibility:hidden"></iframe>
+    </noscript>
+    <!-- End Google Tag Manager (noscript) -->
+
+    <!-- ✅ React Mount Point -->
+    <div id="root"></div>
+
+    <!-- ✅ App Entry -->
+    <script type="module" src="/index.tsx" defer></script>
 
     <!-- ✅ Google Tag Manager -->
     <script>
@@ -16,80 +86,5 @@
       })(window, document, 'script', 'dataLayer', 'GTM-WK447QHP');
     </script>
     <!-- ✅ End Google Tag Manager -->
-
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-    <!-- ✅ Secure and compatible CSP -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:3001 https://accounts.google.com https://apis.google.com https://*.facebook.com https://*.fbcdn.net https://firebase.googleapis.com https://firebaseinstallations.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://*.google-analytics.com https://www.google-analytics.com https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://storage.googleapis.com; script-src 'self' https://www.googletagmanager.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://aistudiocdn.com https://www.gstatic.com https://apis.google.com https://www.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: res.cloudinary.com img.icons8.com www.vectorlogo.zone logowik.com iconape.com api.qrserver.com blob: www.googletagmanager.com *.google-analytics.com www.google-analytics.com; object-src 'none'; frame-src https://accounts.google.com https://*.facebook.com https://*.firebaseapp.com https://maps.google.com https://www.google.com https://www.googletagmanager.com; upgrade-insecure-requests;">
-
-    <!-- ✅ SEO Optimization -->
-    <meta name="description" content="DEV MOBILE - Your one-stop shop for the latest smartphones, smartwatches, and accessories. Get the best deals on top brands like Apple, Samsung, Google, and more.">
-    <meta name="keywords" content="smartphones, mobile phones, apple, samsung, google pixel, smartwatches, accessories, electronics">
-    <title>Dev Mobile</title>
-
-    <!-- ✅ Fonts and Tailwind -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles/main.css">
-
-    <!-- ✅ Tailwind Setup -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Poppins', 'sans-serif'],
-            },
-          },
-        },
-      };
-    </script>
-
-    <!-- ✅ Import Map -->
-    <script type="importmap">
-{
-  "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
-    "firebase/compat/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js",
-    "firebase/compat/auth": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js",
-    "firebase/compat/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js",
-    "firebase/compat/analytics": "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js",
-    "firebase/": "https://aistudiocdn.com/firebase@^12.5.0/"
-  }
-}
-</script>
-  </head>
-
-  <body class="bg-gray-50 text-gray-800 font-sans">
-    <!-- ✅ Google Tag Manager (noscript) -->
-    <noscript>
-      <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WK447QHP"
-        height="0" width="0"
-        style="display:none;visibility:hidden"></iframe>
-    </noscript>
-    <!-- End Google Tag Manager (noscript) -->
-
-    <!-- ✅ Preloader -->
-    <div id="preloader">
-      <div class="logo-container">
-        <h1 class="logo">Dev Mobile</h1>
-        <div class="spinner"></div>
-      </div>
-    </div>
-
-    <!-- ✅ React Mount Point -->
-    <div id="root"></div>
-
-    <!-- ✅ App Entry -->
-    <script type="module" src="/index.tsx"></script>
   </body>
 </html>

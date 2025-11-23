@@ -1,57 +1,63 @@
+
 // FIX: Corrected the import order. The React module must be imported before any files that might augment its types, such as './types.ts'. The previous order was causing a race condition during module initialization, preventing React's JSX types from being correctly recognized and causing the application to fail during render.
-import * as React from 'react';
+import React, { Suspense, lazy } from 'react';
 import * as api from './api';
+import { API_BASE_URL } from './api';
 
 import type { Product, CartItem, User, Order, Review, Store, ChatMessage, Notification, ProductCategory, ProductVariant, DisplayableProduct, HomepageConfig, Coupon, Payout } from './types';
 import Header from './components/Header';
-import ProductList from './components/ProductList';
-import Cart from './components/Cart';
-import FilterControls from './components/FilterControls';
-import ProductDetail from './components/ProductDetail';
-import HomePage from './components/HomePage';
-import Pagination from './components/Pagination';
-import Checkout from './components/Checkout';
-import OrderConfirmation from './components/OrderConfirmation';
-import Auth from './components/Auth';
-import AccountPage from './components/AccountPage';
-import WishlistPage from './components/WishlistPage';
-import ContactPage from './components/ContactPage';
-import FaqPage from './components/FaqPage';
-import ShippingPage from './components/ShippingPage';
-import SecurityGuide from './components/SecurityGuide';
 import { ShoppingCartIcon } from './components/icons';
 import Breadcrumbs, { Breadcrumb } from './components/Breadcrumbs';
 import ToastContainer from './components/ToastContainer';
-import PinCodeModal from './components/PinCodeModal';
 import SortDropdown from './components/SortDropdown';
 import AnimateOnScroll from './components/AnimateOnScroll';
 import ChatButton from './components/ChatButton';
-import Chatbot from './components/Chatbot';
-import OrderTrackingModal from './components/OrderTrackingModal';
-import CompareTray from './components/CompareTray';
-import CompareModal from './components/CompareModal';
-import RepairPage from './components/RepairPage';
 import Footer from './components/Footer';
-import TermsPage from './components/TermsPage';
-import PrivacyPage from './components/PrivacyPage';
-import ReturnsPage from './components/ReturnsPage';
-import BlogPage from './components/BlogPage';
-import FindStorePage from './components/FindStorePage';
-import CouponsPage from './components/CouponsPage';
-import AdminPage from './components/AdminPage';
-import WhyDevMobilePage from './components/WhyDevMobilePage';
-import TrackOrderPage from './components/TrackOrderPage';
-import InvoicePage from './components/InvoicePage';
-import CustomPaymentPage from './components/CustomPaymentPage';
-import SellerPage from './components/SellerPage';
 import { getCloudinaryUrl } from './components/ImageResolver';
+
+// --- Lazy Loaded Components for Code Splitting ---
+const ProductList = lazy(() => import('./components/ProductList'));
+const Cart = lazy(() => import('./components/Cart'));
+const FilterControls = lazy(() => import('./components/FilterControls'));
+const ProductDetail = lazy(() => import('./components/ProductDetail'));
+const HomePage = lazy(() => import('./components/HomePage'));
+const Pagination = lazy(() => import('./components/Pagination'));
+const Checkout = lazy(() => import('./components/Checkout'));
+const OrderConfirmation = lazy(() => import('./components/OrderConfirmation'));
+const Auth = lazy(() => import('./components/Auth'));
+const AccountPage = lazy(() => import('./components/AccountPage'));
+const WishlistPage = lazy(() => import('./components/WishlistPage'));
+const ContactPage = lazy(() => import('./components/ContactPage'));
+const FaqPage = lazy(() => import('./components/FaqPage'));
+const ShippingPage = lazy(() => import('./components/ShippingPage'));
+const SecurityGuide = lazy(() => import('./components/SecurityGuide'));
+const RepairPage = lazy(() => import('./components/RepairPage'));
+const TermsPage = lazy(() => import('./components/TermsPage'));
+const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
+const ReturnsPage = lazy(() => import('./components/ReturnsPage'));
+const BlogPage = lazy(() => import('./components/BlogPage'));
+const FindStorePage = lazy(() => import('./components/FindStorePage'));
+const CouponsPage = lazy(() => import('./components/CouponsPage'));
+const AdminPage = lazy(() => import('./components/AdminPage'));
+const WhyDevMobilePage = lazy(() => import('./components/WhyDevMobilePage'));
+const TrackOrderPage = lazy(() => import('./components/TrackOrderPage'));
+const InvoicePage = lazy(() => import('./components/InvoicePage'));
+const CustomPaymentPage = lazy(() => import('./components/CustomPaymentPage'));
+const SellerPage = lazy(() => import('./components/SellerPage'));
+
+// NEW: Lazy load non-critical UI elements to reduce initial bundle size
+const PinCodeModal = lazy(() => import('./components/PinCodeModal'));
+const Chatbot = lazy(() => import('./components/Chatbot'));
+const OrderTrackingModal = lazy(() => import('./components/OrderTrackingModal'));
+const CompareTray = lazy(() => import('./components/CompareTray'));
+const CompareModal = lazy(() => import('./components/CompareModal'));
 
 
 const PRODUCTS_PER_PAGE = 12;
 const ABANDONMENT_CHECK_INTERVAL = 60 * 1000; // Check every 1 minute for demo
 const ABANDONMENT_THRESHOLD = 5 * 60 * 1000; // 5 minutes for demo purposes
 
-type Page = 'home' | 'account' | 'wishlist' | 'contact' | 'faq' | 'shipping' | 'cart' | 'shop' | 'security-guide' | 'product' | 'repair' | 'terms' | 'privacy' | 'returns' | 'blog' | 'find-store' | 'coupons' | 'admin' | 'seller' | 'why-dev-mobile' | 'track-order' | 'invoice' | 'payment-gateway' | 'payment-success' | 'payment-failure';
+type Page = 'home' | 'account' | 'wishlist' | 'contact' | 'faq' | 'shipping' | 'cart' | 'shop' | 'security-guide' | 'product' | 'repair' | 'terms' | 'privacy' | 'returns' | 'blog' | 'find-store' | 'coupons' | 'admin' | 'seller' | 'why-dev-mobile' | 'track-order' | 'invoice' | 'payment-gateway' | 'payment-success';
 type AppState = 'browsing' | 'checkout' | 'confirmed';
 type ToastType = { id: number; message: string; type: 'success' | 'error' };
 type FlyingImageState = { src: string; top: number; left: number; width: number; height: number; } | null;
@@ -90,6 +96,15 @@ const ProductCardSkeleton: React.FC = () => (
         <div className="h-5 bg-gray-200 rounded w-3/4 mb-4"></div>
         <div className="h-6 bg-gray-200 rounded w-1/3 mt-auto"></div>
       </div>
+    </div>
+);
+
+const FullPageSpinner: React.FC = () => (
+    <div className="flex justify-center items-center py-20">
+        <svg className="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
     </div>
 );
 
@@ -174,6 +189,7 @@ const App: React.FC = () => {
   const [recommendedProducts, setRecommendedProducts] = React.useState<Product[]>([]);
   const [isRecommendationsLoading, setIsRecommendationsLoading] = React.useState(false);
   const [isChatOpen, setChatOpen] = React.useState(false);
+  const [isChatMounted, setChatMounted] = React.useState(false);
   const [chatMessages, setChatMessages] = React.useState<ChatMessage[]>([
     { role: 'model', content: "Hello! I'm your Dev Mobile assistant. How can I help you find the perfect device today?" }
   ]);
@@ -425,8 +441,7 @@ const App: React.FC = () => {
         if (likedProducts.length > 0) prompt += `\nUser has liked: ${likedProducts.join(', ')}.`;
         prompt += `\nRespond ONLY with a JSON array of the product names, like ["Product A", "Product B", "Product C"].`;
 
-        const backendUrl = 'http://localhost:3001';
-        const response = await fetch(`${backendUrl}/api/generate-content`, {
+        const response = await fetch(`${API_BASE_URL}/api/generate-content`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt })
@@ -474,8 +489,7 @@ const App: React.FC = () => {
 
         User's question: "${message}"`;
         
-        const backendUrl = 'http://localhost:3001';
-        const response = await fetch(`${backendUrl}/api/generate-content`, {
+        const response = await fetch(`${API_BASE_URL}/api/generate-content`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt })
@@ -496,6 +510,16 @@ const App: React.FC = () => {
         setChatbotLoading(false);
     }
   }, [chatMessages, products]);
+
+  const handleToggleChat = () => {
+    if (!isChatMounted) {
+        setChatMounted(true);
+        // Wait for mount before opening to allow intro animation
+        setTimeout(() => setChatOpen(true), 50); 
+    } else {
+        setChatOpen(prev => !prev);
+    }
+  };
 
 
   // Handlers
@@ -1264,15 +1288,6 @@ const App: React.FC = () => {
     }
   }, [page, selectedProduct, selectedCategory]);
 
-  // Preloader
-  React.useEffect(() => {
-    const preloader = document.getElementById('preloader');
-    if (!isDataLoading && preloader) {
-      preloader.classList.add('fade-out');
-    }
-  }, [isDataLoading]);
-
-
   const renderContent = () => {
     if (appState === 'confirmed') {
       if (page === 'payment-success' && orderInfo) {
@@ -1425,10 +1440,10 @@ const App: React.FC = () => {
 
   // Handle full-page routes that don't need the main layout
   if (page === 'invoice') {
-    return <InvoicePage />;
+    return <Suspense fallback={<FullPageSpinner />}><InvoicePage /></Suspense>;
   }
   if (page === 'payment-gateway') {
-    return <CustomPaymentPage onPaymentSubmit={handlePaymentProofSubmit} />;
+    return <Suspense fallback={<FullPageSpinner />}><CustomPaymentPage onPaymentSubmit={handlePaymentProofSubmit} /></Suspense>;
   }
 
   return (
@@ -1456,15 +1471,25 @@ const App: React.FC = () => {
       <main className={`container mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8 page-transition ${isPageVisible ? 'page-visible' : 'page-hidden'}`}>
          <Breadcrumbs crumbs={breadcrumbs} />
          <div className={page !== 'home' ? 'mt-6' : ''}>
-           {renderContent()}
+           <Suspense fallback={<FullPageSpinner />}>
+            {renderContent()}
+           </Suspense>
          </div>
       </main>
       
       <Footer currentUser={currentUser} />
 
       <ToastContainer toasts={toasts} />
-      {isAuthModalOpen && <Auth onAuthSuccess={handleAuthSuccess} onSignup={handleSignup} onClose={() => setAuthModalOpen(false)} />}
-      {isPinCodeModalOpen && <PinCodeModal onClose={() => setPinCodeModalOpen(false)} onSetPinCode={handleSetPinCode} />}
+      {isAuthModalOpen && 
+        <Suspense fallback={<FullPageSpinner />}>
+            <Auth onAuthSuccess={handleAuthSuccess} onSignup={handleSignup} onClose={() => setAuthModalOpen(false)} />
+        </Suspense>
+      }
+      {isPinCodeModalOpen && (
+          <Suspense fallback={null}>
+            <PinCodeModal onClose={() => setPinCodeModalOpen(false)} onSetPinCode={handleSetPinCode} />
+          </Suspense>
+      )}
       {flyingImage && (
           <img 
               src={flyingImage.src} 
@@ -1478,11 +1503,27 @@ const App: React.FC = () => {
               alt=""
           />
       )}
-      <ChatButton onClick={() => setChatOpen(prev => !prev)} />
-      <Chatbot isOpen={isChatOpen} onClose={() => setChatOpen(false)} messages={chatMessages} onSubmit={handleChatSubmit} isLoading={isChatbotLoading} />
-      {trackingOrder && <OrderTrackingModal order={trackingOrder} onClose={() => setTrackingOrder(null)} />}
-      {compareList.length > 0 && <CompareTray products={compareProducts} onClose={handleClearCompare} onRemove={handleToggleCompare} onCompare={() => setCompareModalOpen(true)} />}
-      {isCompareModalOpen && <CompareModal products={compareProducts} onClose={() => setCompareModalOpen(false)} onAddToCart={handleAddToCart} onToggleLike={handleToggleLike} likedItems={likedItems} />}
+      <ChatButton onClick={handleToggleChat} />
+      {isChatMounted && (
+        <Suspense fallback={null}>
+          <Chatbot isOpen={isChatOpen} onClose={() => setChatOpen(false)} messages={chatMessages} onSubmit={handleChatSubmit} isLoading={isChatbotLoading} />
+        </Suspense>
+      )}
+      {trackingOrder && (
+        <Suspense fallback={null}>
+          <OrderTrackingModal order={trackingOrder} onClose={() => setTrackingOrder(null)} />
+        </Suspense>
+      )}
+      {compareList.length > 0 && (
+        <Suspense fallback={null}>
+          <CompareTray products={compareProducts} onClose={handleClearCompare} onRemove={handleToggleCompare} onCompare={() => setCompareModalOpen(true)} />
+        </Suspense>
+      )}
+      {isCompareModalOpen && (
+        <Suspense fallback={null}>
+          <CompareModal products={compareProducts} onClose={() => setCompareModalOpen(false)} onAddToCart={handleAddToCart} onToggleLike={handleToggleLike} likedItems={likedItems} />
+        </Suspense>
+      )}
       {showNotificationPrompt && (
           <div className="fixed bottom-6 left-6 bg-white p-4 rounded-lg shadow-lg animate-slide-in-up z-40">
               <p className="font-semibold mb-2">Stay Updated!</p>

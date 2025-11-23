@@ -67,10 +67,10 @@ const Footer: React.FC<FooterProps> = ({ currentUser }) => {
                     <div className="col-span-2 md:col-span-1">
                         <h3 className="font-bold text-white uppercase tracking-wider mb-4 text-center">Follow Us On</h3>
                          <div className="flex justify-center gap-2 mt-4">
-                            <SocialIcon href="https://www.instagram.com/devmobileservice_ahm/" label="Instagram" icon={<InstagramIcon className="w-6 h-6" />} hoverBg="hover:bg-[#e4405f]" />
-                            <SocialIcon href="https://www.facebook.com/devmobileservice_ahm/" label="Facebook" icon={<FacebookIcon className="w-6 h-6" />} hoverBg="hover:bg-[#1877f2]" />
-                            <SocialIcon href="https://wa.me/919974221322" label="WhatsApp" icon={<WhatsAppIcon className="w-6 h-6" />} hoverBg="hover:bg-[#25D366]" />
-                            <SocialIcon href="https://youtube.com" label="YouTube" icon={<YouTubeIcon className="w-6 h-6" />} hoverBg="hover:bg-[#FF0000]" />
+                            <SocialIcon href="https://www.instagram.com/devmobileservice_ahm/" label="" icon={<InstagramIcon className="w-6 h-6" />} hoverBg="hover:bg-[#e4405f]" />
+                            <SocialIcon href="https://www.facebook.com/devmobileservice_ahm/" label="" icon={<FacebookIcon className="w-6 h-6" />} hoverBg="hover:bg-[#1877f2]" />
+                            <SocialIcon href="https://wa.me/919974221322" label="" icon={<WhatsAppIcon className="w-6 h-6" />} hoverBg="hover:bg-[#25D366]" />
+                            <SocialIcon href="https://youtube.com" label="" icon={<YouTubeIcon className="w-6 h-6" />} hoverBg="hover:bg-[#FF0000]" />
                         </div>
                     </div>
                 </div>

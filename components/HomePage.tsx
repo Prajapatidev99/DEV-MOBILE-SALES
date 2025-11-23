@@ -1,12 +1,14 @@
-// FIX: Changed React import to `import * as React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
-import * as React from 'react';
+// FIX: Changed React import to `import React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
+import React, { Suspense } from 'react';
 import type { Product, DisplayableProduct, HomepageConfig, ProductVariant } from '../types';
 import HeroBanner from './HeroBanner';
-import BrandSlider from './BrandSlider';
-import PromotionalBanners from './PromotionalBanners';
 import ProductCard from './ProductCard';
-import RecentlyViewed from './RecentlyViewed';
 import AnimateOnScroll from './AnimateOnScroll';
+
+// Lazy load non-critical components
+const BrandSlider = React.lazy(() => import('./BrandSlider'));
+const PromotionalBanners = React.lazy(() => import('./PromotionalBanners'));
+const RecentlyViewed = React.lazy(() => import('./RecentlyViewed'));
 
 interface ProductCarouselProps {
   title: string;
@@ -148,7 +150,9 @@ const HomePage: React.FC<HomePageProps> = ({ homepageConfig, allProducts, brands
         onShopNowClick={() => onBrandSelect('All')} 
         scrollOffset={scrollOffset} 
       />
-      <AnimateOnScroll><BrandSlider brands={brands} onBrandSelect={onBrandSelect} /></AnimateOnScroll>
+      <Suspense fallback={<div className="h-40 bg-gray-100 rounded-lg animate-pulse"></div>}>
+        <AnimateOnScroll><BrandSlider brands={brands} onBrandSelect={onBrandSelect} /></AnimateOnScroll>
+      </Suspense>
       
       {/* FIX: Moved Best Selling carousel here from the bottom */}
       <AnimateOnScroll>
@@ -179,7 +183,9 @@ const HomePage: React.FC<HomePageProps> = ({ homepageConfig, allProducts, brands
       />
       </AnimateOnScroll>
       
-      <AnimateOnScroll><PromotionalBanners banners={homepageConfig.promos} /></AnimateOnScroll>
+      <Suspense fallback={<div className="h-64 bg-gray-100 rounded-lg animate-pulse"></div>}>
+        <AnimateOnScroll><PromotionalBanners banners={homepageConfig.promos} /></AnimateOnScroll>
+      </Suspense>
       
       {refurbishedDeals.length > 0 && (
         <AnimateOnScroll>
@@ -217,18 +223,20 @@ const HomePage: React.FC<HomePageProps> = ({ homepageConfig, allProducts, brands
       )}
 
       {recentlyViewedProducts.length > 0 && (
-         <AnimateOnScroll>
-         <RecentlyViewed
-            products={recentlyViewedProducts}
-            likedItems={likedItems}
-            onToggleLike={onToggleLike}
-            onAddToCart={onAddToCart}
-            onNotifyMe={onNotifyMe}
-            notificationList={notificationList}
-            compareList={compareList}
-            onToggleCompare={onToggleCompare}
-        />
-        </AnimateOnScroll>
+         <Suspense fallback={<div className="h-64 bg-gray-100 rounded-lg animate-pulse"></div>}>
+            <AnimateOnScroll>
+                <RecentlyViewed
+                    products={recentlyViewedProducts}
+                    likedItems={likedItems}
+                    onToggleLike={onToggleLike}
+                    onAddToCart={onAddToCart}
+                    onNotifyMe={onNotifyMe}
+                    notificationList={notificationList}
+                    compareList={compareList}
+                    onToggleCompare={onToggleCompare}
+                />
+            </AnimateOnScroll>
+        </Suspense>
       )}
       <AnimateOnScroll>
        <ProductCarousel 

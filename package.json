@@ -5,38 +5,23 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^1.27.0",
-    "@tailwindcss/vite": "^4.1.16",
-    "cloudinary": "^2.8.0",
-    "dotenv": "^17.2.3",
-    "express-session": "^1.18.2",
-    "firebase": "^12.5.0",
-    "framer-motion": "^12.23.24",
-    "lucide-react": "^0.553.0",
-    "multer": "^2.0.2",
-    "passport": "^0.7.0",
-    "passport-facebook": "^3.0.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "firebase": "^12.6.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@types/react": "^19.2.2",
-    "@types/react-dom": "^19.2.2",
-    "@vitejs/plugin-react": "^5.0.0",
-    "autoprefixer": "^10.4.21",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.22",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.16",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
-  },
-  "description": "<div align=\"center\"> <img width=\"1200\" height=\"475\" alt=\"GHBanner\" src=\"https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6\" /> </div>",
-  "main": "index.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+    "tailwindcss": "^3.4.18",
+    "terser": "^5.44.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  }
 }

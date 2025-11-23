@@ -1,5 +1,7 @@
+
 import * as React from 'react';
 import type { Product, ProductCategory, ProductVariant, User, Store } from '../types';
+import { API_BASE_URL } from '../api';
 
 // --- Price Calculation ---
 const calculateCustomerPrice = (sellerPrice: number): number => {
@@ -111,8 +113,7 @@ const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ isOpen, onClose
 
             Respond ONLY with the single JSON object that matches the schema. Do not include any surrounding text, explanations, or markdown formatting like \`\`\`json.`;
 
-            const backendUrl = 'http://localhost:3001';
-            const proxyResponse = await fetch(`${backendUrl}/api/generate-content`, {
+            const response = await fetch(`${API_BASE_URL}/api/generate-content`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -124,12 +125,12 @@ const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ isOpen, onClose
                 }),
             });
 
-            if (!proxyResponse.ok) {
-                const errorData = await proxyResponse.json();
+            if (!response.ok) {
+                const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to fetch from backend proxy.');
             }
 
-            const data = await proxyResponse.json();
+            const data = await response.json();
             
             if (data.success && data.text) {
                 const fetchedData = JSON.parse(data.text);

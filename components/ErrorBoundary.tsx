@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -10,8 +10,6 @@ interface ErrorBoundaryState {
 }
 
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // FIX: Reverted to a standard constructor for state initialization. 
-  // The modern public class field syntax was causing a TypeScript resolution issue where `this.props` was not recognized on the component instance. The constructor pattern reliably resolves this.
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Backend server for Dev Mobile notifications.",
   "main": "server.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node server.js"
   },
@@ -14,4 +15,4 @@
     "express": "^4.18.2",
     "firebase-admin": "^12.1.0"
   }
-} 
+}

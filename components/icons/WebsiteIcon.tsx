@@ -1,7 +1,5 @@
-
-
-// FIX: Changed React import to `import * as React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
-import * as React from 'react';
+// FIX: Changed React import to `import React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
+import React from 'react';
 
 const WebsiteIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg

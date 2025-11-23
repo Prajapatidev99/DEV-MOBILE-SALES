@@ -217,7 +217,8 @@ const HomepageEditor: React.FC<HomepageEditorProps> = ({ config, onSave, addToas
                         <h3 className="font-bold mb-2">Click to Set Focal Point</h3>
                         <p className="text-sm text-gray-600 mb-2">Choose the most important part of the image to keep it centered.</p>
                         <div className="relative cursor-crosshair">
-                            <ImageResolver src={imagePreviewUrl} alt="Focal point preview" className="max-w-lg max-h-96 object-contain" onClick={handleSetFocalPoint} />
+                            {/* FIX: Added the required `width`, `height`, and `sizes` props to the `ImageResolver` component used in the focal point editor. This resolves a TypeScript error where these mandatory properties were missing, ensuring type safety and correct component behavior. */}
+                            <ImageResolver src={imagePreviewUrl} alt="Focal point preview" className="max-w-lg max-h-96 object-contain" onClick={handleSetFocalPoint} width={512} height={384} sizes="(max-width: 512px) 90vw, 512px" />
                         </div>
                     </div>
                 </div>

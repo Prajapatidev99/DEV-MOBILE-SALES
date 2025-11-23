@@ -1,10 +1,19 @@
-// FIX: The application uses the Firebase v8 compatibility syntax but the import map pointed to the v9 modular SDK, which caused import errors. This has been corrected by changing the imports to use the v9 compatibility libraries (e.g., 'firebase/compat/app'). This change, combined with updates to the import map in index.html, resolves the module loading failure.
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import 'firebase/compat/firestore';
-import 'firebase/compat/analytics';
 
-// Your web app's Firebase configuration from the Firebase console
+// FIX: Refactored to lazy-load Firebase services. Instead of initializing the app immediately at the top level,
+// we export getter functions. This prevents the heavy Firebase SDKs from blocking the initial render
+// until they are actually needed (e.g., when the user logs in or data is fetched).
+// FIX: Separated type imports from value imports to resolve TypeScript errors.
+
+import { initializeApp } from "firebase/app";
+import type { FirebaseApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import type { Auth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import type { Firestore } from "firebase/firestore";
+import { getAnalytics } from "firebase/analytics";
+import type { Analytics } from "firebase/analytics";
+
+// Your web app's Firebase configuration from environment variables
 const firebaseConfig = {
   apiKey: "AIzaSyDTGiFG3ACwOho2RZ33rwg2TelkpsM8qf4",
   authDomain: "dev-mobile-sales.firebaseapp.com",
@@ -15,14 +24,37 @@ const firebaseConfig = {
   measurementId: "G-LZW5X3VMHY"
 };
 
-// Initialize Firebase
-// FIX: Switched from v9 `initializeApp` to v8 `firebase.initializeApp` and removed App Check, which is a v9+ feature, to align with the older SDK.
-const app = !firebase.apps.length ? firebase.initializeApp(firebaseConfig) : firebase.app();
+// Singleton instances
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
+let db: Firestore | undefined;
+let analytics: Analytics | undefined;
 
-// Get Firebase services
-const auth = firebase.auth();
-const db = firebase.firestore();
-const analytics = firebase.analytics();
+// Export the services via getter functions for lazy initialization
+export const getFirebaseApp = (): FirebaseApp => {
+  if (!app) {
+    app = initializeApp(firebaseConfig);
+  }
+  return app;
+};
 
-// Export the services for use in other parts of the app
-export { app, auth, db, analytics };
+export const getFirebaseAuth = (): Auth => {
+  if (!auth) {
+    auth = getAuth(getFirebaseApp());
+  }
+  return auth;
+};
+
+export const getFirebaseDb = (): Firestore => {
+  if (!db) {
+    db = getFirestore(getFirebaseApp());
+  }
+  return db;
+};
+
+export const getFirebaseAnalytics = (): Analytics => {
+  if (!analytics) {
+    analytics = getAnalytics(getFirebaseApp());
+  }
+  return analytics;
+};
