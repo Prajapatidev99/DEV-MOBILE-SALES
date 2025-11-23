@@ -12,16 +12,16 @@ const brandLogos: { [key: string]: string } = {
   Samsung: "https://www.vectorlogo.zone/logos/samsung/samsung-icon.svg",
   Google: "https://www.vectorlogo.zone/logos/google/google-icon.svg",
   OnePlus: "https://cdn.brandfetch.io/idi46coDvW/theme/dark/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1676970644012",
-  Xiaomi: "https://www.vectorlogo.zone/logos/xiaomi/xiaomi-icon.svg",
-  Oppo: "https://www.vectorlogo.zone/logos/oppo/oppo-icon.svg",
-
-  // FIXED — This is a real SVG, not a webpage.
+  Redmi: "https://www.vectorlogo.zone/logos/mi/mi-icon.svg",
+  Oppo: "https://res.cloudinary.com/dv9z9uaht/image/upload/v1763914846/oppo_ngth4r.svg",
   Vivo: "https://iconape.com/wp-content/files/as/291951/png/vivo-mobile-phones-logo.png",
-
-  Realme: "https://upload.wikimedia.org/wikipedia/commons/9/95/Realme_realme_logo.svg",
+  Poco: "https://upload.wikimedia.org/wikipedia/commons/7/78/Poco_Smartphone_Company_logo.svg",
+  Realme: "https://upload.wikimedia.org/wikipedia/commons/a/a2/Realme_logo.svg",
   boAt: "https://www.vectorlogo.zone/logos/boat-lifestyle/boat-lifestyle-icon.svg",
   Spigen: "https://iconape.com/wp-content/files/na/31185/svg/spigen.svg",
   Anker: "https://www.vectorlogo.zone/logos/anker/anker-icon.svg",
+  Motorola:"https://upload.wikimedia.org/wikipedia/commons/4/4d/Motorola_logo_2018.png",
+  Itel:"https://upload.wikimedia.org/wikipedia/commons/a/a2/Itel_Mobile_logo.jpg"
 };
 
 // Brand Slider Component
