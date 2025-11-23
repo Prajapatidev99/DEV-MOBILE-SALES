@@ -1,9 +1,7 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-g" />
+    <meta charset="UTF-8" />
 
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,72 +9,33 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-<meta http-equiv="Content-Security-Policy"
-content="
-default-src 'self';
-connect-src 
-  'self' 
-  http://localhost:3001 
-  https://dev-mobile-sales.onrender.com
-  https://*.google.com 
-  https://*.googleapis.com 
-  https://*.facebook.com 
-  https://*.fbcdn.net 
-  https://*.firebaseio.com 
-  wss://*.firebaseio.com 
-  https://*.google-analytics.com;
-script-src 
-  'self' 
-  https://www.googletagmanager.com 
-  https://ajax.googleapis.com 
-  https://www.gstatic.com 
-  https://apis.google.com 
-  https://www.google.com 
-  'unsafe-inline';
-style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-font-src 'self' https://fonts.gstatic.com;
-img-src 
-  'self' 
-  data: 
-  res.cloudinary.com 
-  img.icons8.com 
-  www.vectorlogo.zone 
-  logowik.com 
-  iconape.com 
-  api.qrserver.com 
-  blob: 
-  www.googletagmanager.com 
-  *.google-analytics.com 
-  www.google-analytics.com 
-  www.google.com;
-object-src 'none';
-frame-src 
-  https://accounts.google.com 
-  https://*.facebook.com 
-  https://*.firebaseapp.com 
-  https://maps.google.com 
-  https://www.google.com 
-  https://www.googletagmanager.com;
-upgrade-insecure-requests;
-">
+    <!-- ✅ Secure and compatible CSP -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:3001  https://dev-mobile-sales.onrender.com https://*.google.com https://*.googleapis.com https://*.facebook.com https://*.fbcdn.net https://*.firebaseio.com wss://*.firebaseio.com https://*.google-analytics.com; script-src 'self' https://www.googletagmanager.com https://ajax.googleapis.com https://www.gstatic.com https://apis.google.com https://www.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: res.cloudinary.com img.icons8.com www.vectorlogo.zone logowik.com iconape.com api.qrserver.com blob: www.googletagmanager.com *.google-analytics.com www.google-analytics.com www.google.com; object-src 'none'; frame-src https://accounts.google.com https://*.facebook.com https://*.firebaseapp.com https://maps.google.com https://www.google.com https://www.googletagmanager.com; upgrade-insecure-requests;">
+
+    <!-- ✅ SEO Optimization -->
     <meta name="description" content="DEV MOBILE - Your one-stop shop for the latest smartphones, smartwatches, and accessories. Get the best deals on top brands like Apple, Samsung, Google, and more.">
     <meta name="keywords" content="smartphones, mobile phones, apple, samsung, google pixel, smartwatches, accessories, electronics">
     <title>Dev Mobile</title>
 
+    <!-- ✅ Optimized Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- ✅ Preload LCP Image (Optimized for Mobile with correct aspect ratio 16:9) -->
     <link
       rel="preload"
       as="image"
       fetchpriority="high"
       href="https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_1600,h_900,c_fill,g_auto/v1763286299/hero_btit7z.webp"
       imagesrcset="
+        https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_320,h_180,c_fill,g_auto/v1763286299/hero_btit7z.webp 320w,
         https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_400,h_225,c_fill,g_auto/v1763286299/hero_btit7z.webp 400w,
+        https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_600,h_338,c_fill,g_auto/v1763286299/hero_btit7z.webp 600w,
         https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_800,h_450,c_fill,g_auto/v1763286299/hero_btit7z.webp 800w,
         https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_1200,h_675,c_fill,g_auto/v1763286299/hero_btit7z.webp 1200w,
-        https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_1600,h_900,c_fill,g_auto/v1763286299/hero_btit7z.webp 1600w
+        https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_1600,h_900,c_fill,g_auto/v1763286299/hero_btit7z.webp 1600w,
+        https://res.cloudinary.com/dv9z9uaht/image/upload/f_auto,q_auto:best,w_2400,h_1350,c_fill,g_auto/v1763286299/hero_btit7z.webp 2400w
       "
       imagesizes="100vw"
       type="image/webp"
@@ -102,16 +61,21 @@ upgrade-insecure-requests;
 </head>
 
   <body class="bg-gray-50 text-gray-800">
+    <!-- ✅ Google Tag Manager (noscript) -->
     <noscript>
       <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WK447QHP"
         height="0" width="0"
         style="display:none;visibility:hidden"></iframe>
     </noscript>
+    <!-- End Google Tag Manager (noscript) -->
 
+    <!-- ✅ React Mount Point -->
     <div id="root"></div>
 
+    <!-- ✅ App Entry -->
     <script type="module" src="/index.tsx" defer></script>
 
+    <!-- ✅ Google Tag Manager -->
     <script>
       (function(w, d, s, l, i) {
         w[l] = w[l] || [];
@@ -123,5 +87,6 @@ upgrade-insecure-requests;
         f.parentNode.insertBefore(j, f);
       })(window, document, 'script', 'dataLayer', 'GTM-WK447QHP');
     </script>
+    <!-- ✅ End Google Tag Manager -->
   </body>
 </html>

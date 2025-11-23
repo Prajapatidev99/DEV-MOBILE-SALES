@@ -31,16 +31,31 @@ try {
 
 
 // Middleware
+const allowedOrigins = [
+    process.env.FRONTEND_URL, // Variable from Render
+    'http://localhost:5173', 
+    'http://localhost:3000',
+    'https://www.devmobile.shop',
+    'https://devmobile.shop',
+    'https://dev-mobile-sales.onrender.com' // Allow self for testing
+].filter(Boolean); // Remove undefined values
+
 const corsOptions = {
-  // In production, set FRONTEND_URL to your app's domain.
-  origin: [
-      process.env.FRONTEND_URL || 'http://localhost:5173', 
-      'http://localhost:3000',
-      'https://www.devmobile.shop',
-      'https://devmobile.shop'
-  ],
-  optionsSuccessStatus: 200
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ Blocked by CORS: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  optionsSuccessStatus: 200,
+  credentials: true
 };
+
 app.use(cors(corsOptions));
 app.use(express.json()); // Parse JSON bodies
 
