@@ -15,7 +15,7 @@ const brandLogos: { [key: string]: string } = {
     'OnePlus': 'https://cdn.brandfetch.io/idi46coDvW/theme/dark/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1676970644012',
     'Xiaomi': 'https://www.vectorlogo.zone/logos/xiaomi/xiaomi-icon.svg',
     'Oppo': 'https://www.vectorlogo.zone/logos/oppo/oppo-icon.svg',
-    'Vivo': 'https://iconape.com/vivo-mobile-phones-logo-logo-icon-svg-png.html',
+    'Vivo': 'https://iconape.com/wp-content/files/as/291951/png/vivo-mobile-phones-logo.png',
     'Realme': 'https://logowik.com/content/uploads/images/realme-new-20239330.logowik.com.webp',
     'boAt': 'https://www.vectorlogo.zone/logos/boat-lifestyle/boat-lifestyle-icon.svg',
     'Spigen': 'https://iconape.com/wp-content/files/na/31185/svg/spigen.svg',
