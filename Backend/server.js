@@ -23,7 +23,10 @@ try {
         db = admin.firestore();
         console.log("✅ Firebase Admin initialized successfully.");
     } else {
-        throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON environment variable not set.");
+        // Only warn if not in test/build environment where it might be intentional
+        if (process.env.NODE_ENV !== 'test') {
+             console.warn("FIREBASE_SERVICE_ACCOUNT_JSON environment variable not set.");
+        }
     }
 } catch (e) {
     console.error('❌ Firebase Admin initialization failed:', e.message);
@@ -33,8 +36,6 @@ try {
 // Middleware
 const allowedOrigins = [
     process.env.FRONTEND_URL, // Variable from Render
-    'http://localhost:5173', 
-    'http://localhost:3000',
     'https://www.devmobile.shop',
     'https://devmobile.shop',
     'https://dev-mobile-sales.onrender.com' // Allow self for testing
@@ -45,6 +46,11 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    // Strictly allow any localhost origin for development (e.g., localhost:5173, localhost:3000)
+    if (origin.startsWith('http://localhost')) {
+        return callback(null, true);
+    }
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -57,6 +63,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable pre-flight request handling across-the-board
+
 app.use(express.json()); // Parse JSON bodies
 
 // Middleware to secure the telegram endpoint
