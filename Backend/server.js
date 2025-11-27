@@ -15,21 +15,41 @@ const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 // Initialize Firebase Admin
 let db;
 try {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    let serviceAccount;
+    
+    // 1. Try to load from Secret File first (Render Secret File or local file)
+    try {
+        serviceAccount = require('./serviceAccount.json');
+        console.log("✅ Loaded credentials from serviceAccount.json");
+    } catch (e) {
+        // File not found, proceed to check environment variable
+    }
+
+    // 2. Fallback to Environment Variable
+    if (!serviceAccount && process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+        try {
+            serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+            console.log("✅ Loaded credentials from FIREBASE_SERVICE_ACCOUNT_JSON env var");
+        } catch (e) {
+            console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON env var");
+        }
+    }
+
+    if (serviceAccount) {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)
         });
         db = admin.firestore();
         console.log("✅ Firebase Admin initialized successfully.");
     } else {
-        // Only warn if not in test/build environment where it might be intentional
+        // Only warn if not in test environment
         if (process.env.NODE_ENV !== 'test') {
-             console.warn("FIREBASE_SERVICE_ACCOUNT_JSON environment variable not set.");
+             throw new Error("No serviceAccount.json file AND no FIREBASE_SERVICE_ACCOUNT_JSON env var found.");
         }
     }
 } catch (e) {
     console.error('❌ Firebase Admin initialization failed:', e.message);
+    console.error('Make sure serviceAccount.json is added as a Secret File in Render OR FIREBASE_SERVICE_ACCOUNT_JSON is set in Environment Variables.');
 }
 
 
