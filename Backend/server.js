@@ -15,17 +15,21 @@ const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 // Initialize Firebase Admin
 let db;
 try {
-    // Try to load from Secret File first
-    const serviceAccount = require('./serviceAccount.json');
-    
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
-    db = admin.firestore();
-    console.log("✅ Firebase Admin initialized successfully.");
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+        db = admin.firestore();
+        console.log("✅ Firebase Admin initialized successfully.");
+    } else {
+        // Only warn if not in test/build environment where it might be intentional
+        if (process.env.NODE_ENV !== 'test') {
+             console.warn("FIREBASE_SERVICE_ACCOUNT_JSON environment variable not set.");
+        }
+    }
 } catch (e) {
     console.error('❌ Firebase Admin initialization failed:', e.message);
-    console.error('Make sure serviceAccount.json is added as a Secret File in Render.');
 }
 
 
@@ -76,6 +80,63 @@ const requireSecretKey = (req, res, next) => {
 // Health check endpoint
 app.get('/', (req, res) => {
     res.send('Dev Mobile Backend is running!');
+});
+
+// --- SITEMAP GENERATOR ---
+app.get('/sitemap.xml', async (req, res) => {
+    try {
+        const baseUrl = process.env.FRONTEND_URL || 'https://www.devmobile.shop';
+        
+        // 1. Define Static Routes
+        const staticRoutes = [
+            'home', 'shop', 'cart', 'wishlist', 'account', 
+            'contact', 'faq', 'shipping', 'returns', 
+            'privacy', 'terms', 'blog', 'find-store'
+        ];
+
+        let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+
+        // Add Static Routes
+        staticRoutes.forEach(route => {
+            sitemap += `
+  <url>
+    <loc>${baseUrl}/#/${route}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+        });
+
+        // 2. Fetch Dynamic Products from Firebase
+        if (db) {
+            const productsSnapshot = await db.collection('products').get();
+            productsSnapshot.forEach(doc => {
+                const product = doc.data();
+                // Escape special characters in URL
+                const safeId = encodeURIComponent(product.id);
+                // Last modified date (default to today if not found)
+                const lastMod = product.dateAdded ? product.dateAdded.split('T')[0] : new Date().toISOString().split('T')[0];
+
+                sitemap += `
+  <url>
+    <loc>${baseUrl}/#/product/${safeId}</loc>
+    <lastmod>${lastMod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>`;
+            });
+        }
+
+        sitemap += `
+</urlset>`;
+
+        res.header('Content-Type', 'application/xml');
+        res.send(sitemap);
+
+    } catch (error) {
+        console.error('Error generating sitemap:', error);
+        res.status(500).send('Error generating sitemap');
+    }
 });
 
 // API endpoint to send the Telegram alert, now secured with a secret key
@@ -200,13 +261,10 @@ app.post('/api/generate-content', async (req, res) => {
         } catch (error) {
             attempt++;
             
-            // Allow retry on almost any error (timeout, network, 500, 503) to be more robust
-            // Only stop if it's a 4xx client error (e.g. invalid key, bad request) which shouldn't happen with correct server config.
-            const isClientError = error.response?.status >= 400 && error.response?.status < 500;
-            const isRetryable = !isClientError;
+            const isRetryable = error.message && (error.message.includes('UNAVAILABLE') || error.message.includes('overloaded') || error.message.includes('503'));
 
             if (isRetryable && attempt < maxRetries) {
-                console.warn(`Gemini API call attempt ${attempt} failed: ${error.message}. Retrying in ${delay / 1000}s...`);
+                console.warn(`Gemini API call attempt ${attempt} failed. Retrying in ${delay / 1000}s...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 delay *= 2; // Exponential backoff
             } else {
