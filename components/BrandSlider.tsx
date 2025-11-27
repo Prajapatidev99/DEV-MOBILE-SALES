@@ -30,7 +30,7 @@ const BrandSlider: React.FC<BrandSliderProps> = ({ brands, onBrandSelect }) => {
   return (
     <div className="my-4 bg-white py-6 rounded-lg border border-gray-200 shadow-sm">
       <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
-        Shop Phones by Brand
+        Shop by Brand
       </h2>
 
       <div className="relative group">
