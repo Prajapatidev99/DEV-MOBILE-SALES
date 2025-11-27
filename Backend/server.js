@@ -15,21 +15,17 @@ const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 // Initialize Firebase Admin
 let db;
 try {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
-        db = admin.firestore();
-        console.log("✅ Firebase Admin initialized successfully.");
-    } else {
-        // Only warn if not in test/build environment where it might be intentional
-        if (process.env.NODE_ENV !== 'test') {
-             console.warn("FIREBASE_SERVICE_ACCOUNT_JSON environment variable not set.");
-        }
-    }
+    // Try to load from Secret File first
+    const serviceAccount = require('./serviceAccount.json');
+    
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+    });
+    db = admin.firestore();
+    console.log("✅ Firebase Admin initialized successfully.");
 } catch (e) {
     console.error('❌ Firebase Admin initialization failed:', e.message);
+    console.error('Make sure serviceAccount.json is added as a Secret File in Render.');
 }
 
 
