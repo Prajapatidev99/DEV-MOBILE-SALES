@@ -21,7 +21,8 @@ const brandLogos: { [key: string]: string } = {
   Spigen: "https://iconape.com/wp-content/files/na/31185/svg/spigen.svg",
   Anker: "https://www.vectorlogo.zone/logos/anker/anker-icon.svg",
   Motorola:"https://upload.wikimedia.org/wikipedia/commons/4/4d/Motorola_logo_2018.png",
-  Itel:"https://upload.wikimedia.org/wikipedia/commons/a/a2/Itel_Mobile_logo.jpg"
+  Itel:"https://upload.wikimedia.org/wikipedia/commons/a/a2/Itel_Mobile_logo.jpg",
+  Pebble:"https://res.cloudinary.com/dv9z9uaht/image/upload/v1764251940/idO_wkRGdl_1764251886665_szahsq.jpg"
 };
 
 // Brand Slider Component

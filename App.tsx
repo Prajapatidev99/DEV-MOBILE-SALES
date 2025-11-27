@@ -220,6 +220,11 @@ const App: React.FC = () => {
   }, [approvedProducts]);
   const selectedProduct = React.useMemo(() => products.find(p => p.id === selectedProductId) || null, [selectedProductId, products]);
 
+  const validLikedCount = React.useMemo(() => {
+    const productIds = new Set(products.map(p => p.id));
+    return likedItems.filter(id => productIds.has(id)).length;
+  }, [likedItems, products]);
+
   // Flattened product list for homepage display
   const displayableProducts = React.useMemo<DisplayableProduct[]>(() => {
     return approvedProducts.flatMap(product =>
@@ -259,10 +264,9 @@ const App: React.FC = () => {
     setIsDataLoading(true);
     try {
       await api.seedDatabase(); // Seed only if it's the first time
-      const [loadedProducts, loadedStores, sessionUser, loadedConfig, loadedCoupons] = await Promise.all([
+      const [loadedProducts, loadedStores, loadedConfig, loadedCoupons] = await Promise.all([
         api.getProducts(),
         api.getStores(),
-        api.getCurrentUser(),
         api.getHomepageConfig(),
         api.getCoupons(),
       ]);
@@ -281,26 +285,6 @@ const App: React.FC = () => {
       const savedPinCode = api.getPinCode();
       if (savedPinCode) setUserPinCode(savedPinCode);
       
-      if (sessionUser) {
-        setCurrentUser(sessionUser);
-        const [userCart, userWishlist, userOrders] = await Promise.all([
-          api.getCart(sessionUser.id),
-          api.getWishlist(sessionUser.id),
-          api.getOrders(sessionUser.id)
-        ]);
-        setCartItems(userCart);
-        setLikedItems(userWishlist);
-        setOrders(userOrders);
-
-        if (sessionUser.role === 'admin' || sessionUser.role === 'seller') {
-            const [loadedUsers, loadedOrders] = await Promise.all([
-                api.getAllUsers(),
-                api.getAllOrders()
-            ]);
-            setAllUsers(loadedUsers);
-            setAllOrders(loadedOrders);
-        }
-      }
     } catch (error) {
       console.error("Failed to load initial data:", error);
       addToast("Failed to load store data. Please refresh.", "error");
@@ -313,6 +297,47 @@ const App: React.FC = () => {
   React.useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
+
+  // FIX: Real-time Auth Subscription
+  // This replaces the one-time check in loadInitialData to prevent race conditions and ensure
+  // the UI always reflects the current auth state, even after refreshes or network hiccups.
+  React.useEffect(() => {
+    const unsubscribe = api.subscribeToAuthChanges(async (user) => {
+        setCurrentUser(user);
+        if (user) {
+            // Load user-specific data whenever auth state confirms a user is logged in
+            try {
+                const [userCart, userWishlist, userOrders] = await Promise.all([
+                    api.getCart(user.id),
+                    api.getWishlist(user.id),
+                    api.getOrders(user.id)
+                ]);
+                setCartItems(userCart);
+                setLikedItems(userWishlist);
+                setOrders(userOrders);
+
+                if (user.role === 'admin' || user.role === 'seller') {
+                    const [loadedUsers, loadedOrders] = await Promise.all([
+                        api.getAllUsers(),
+                        api.getAllOrders()
+                    ]);
+                    setAllUsers(loadedUsers);
+                    setAllOrders(loadedOrders);
+                }
+            } catch (error) {
+                console.error("Error loading user data:", error);
+            }
+        } else {
+            // Clear user data on logout
+            setCartItems([]);
+            setLikedItems([]);
+            setOrders([]);
+            setAllUsers([]);
+            setAllOrders([]);
+        }
+    });
+    return () => unsubscribe();
+  }, []);
   
   // Geolocation
   React.useEffect(() => {
@@ -530,26 +555,31 @@ const App: React.FC = () => {
       return;
     }
 
-    triggerHapticFeedback();
-    const targetElement = event.currentTarget as HTMLElement;
-    const rect = targetElement.getBoundingClientRect();
-    
-    const imagePublicId = variant.imagePublicId || (product.imagePublicIds && product.imagePublicIds.length > 0 ? product.imagePublicIds[0] : '');
+    try {
+        triggerHapticFeedback();
+        const targetElement = event.currentTarget as HTMLElement;
+        const rect = targetElement.getBoundingClientRect();
+        
+        const imagePublicId = variant.imagePublicId || (product.imagePublicIds && product.imagePublicIds.length > 0 ? product.imagePublicIds[0] : '');
 
-    setFlyingImage({
-      src: getCloudinaryUrl(imagePublicId, 200),
-      top: rect.top,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height,
-    });
-    setTimeout(() => setFlyingImage(null), 750);
+        setFlyingImage({
+          src: getCloudinaryUrl(imagePublicId, 200),
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        });
+        setTimeout(() => setFlyingImage(null), 750);
 
-    const updatedCart = await api.addToCart(currentUser.id, product, variant);
-    setCartItems(updatedCart);
-    addToast(`${product.name} added to cart!`);
-    setAnimateCartIcon(true);
-    setTimeout(() => setAnimateCartIcon(false), 500);
+        const updatedCart = await api.addToCart(currentUser.id, product, variant);
+        setCartItems(updatedCart);
+        addToast(`${product.name} added to cart!`);
+        setAnimateCartIcon(true);
+        setTimeout(() => setAnimateCartIcon(false), 500);
+    } catch (error) {
+        console.error("Add to cart error:", error);
+        addToast("Failed to add to cart. Please check your connection.", "error");
+    }
   }, [addToast, currentUser]);
 
   const handleRemoveFromCart = async (variantId: string) => {
@@ -574,16 +604,21 @@ const App: React.FC = () => {
       setAuthModalOpen(true);
       return;
     }
-    triggerHapticFeedback();
-    const updatedWishlist = await api.toggleWishlist(currentUser.id, productId);
-    const isLiked = updatedWishlist.includes(productId);
-    
-    addToast(isLiked ? 'Added to wishlist!' : 'Removed from wishlist.', 'success');
-    if(isLiked) {
-        setAnimateLikedIcon(true);
-        setTimeout(() => setAnimateLikedIcon(false), 500);
+    try {
+        triggerHapticFeedback();
+        const updatedWishlist = await api.toggleWishlist(currentUser.id, productId);
+        const isLiked = updatedWishlist.includes(productId);
+        
+        addToast(isLiked ? 'Added to wishlist!' : 'Removed from wishlist.', 'success');
+        if(isLiked) {
+            setAnimateLikedIcon(true);
+            setTimeout(() => setAnimateLikedIcon(false), 500);
+        }
+        setLikedItems(updatedWishlist);
+    } catch (error) {
+        console.error("Toggle wishlist error:", error);
+        addToast("Failed to update wishlist.", "error");
     }
-    setLikedItems(updatedWishlist);
   }, [addToast, currentUser]);
 
   const handleToggleCompare = React.useCallback((productId: number) => {
@@ -653,7 +688,8 @@ const App: React.FC = () => {
   };
 
   const handleAuthSuccess = async (user: User) => {
-    setCurrentUser(user);
+    // The subscription listener in useEffect will handle data loading.
+    // We just handle UI feedback here.
     setAuthModalOpen(false);
     addToast(`Welcome back, ${user.name}!`);
 
@@ -672,38 +708,15 @@ const App: React.FC = () => {
             addToast(`Happy Birthday, ${user.name.split(' ')[0]}! 🎉 We've sent a special 20% discount (code: BDAY20) to your email. Enjoy your day!`, 'success');
         }
     }
-
-    // load user-specific data
-    const [userCart, userWishlist, userOrders] = await Promise.all([
-      api.getCart(user.id),
-      api.getWishlist(user.id),
-      api.getOrders(user.id)
-    ]);
-    setCartItems(userCart);
-    setLikedItems(userWishlist);
-    setOrders(userOrders);
-
-    if (user.role === 'admin' || user.role === 'seller') {
-        const [loadedUsers, loadedOrders] = await Promise.all([
-            api.getAllUsers(),
-            api.getAllOrders()
-        ]);
-        setAllUsers(loadedUsers);
-        setAllOrders(loadedOrders);
-    }
   };
 
 
   const handleSignup = async (name: string, email: string, pass: string, mobile: string, marketingConsent: boolean) => {
      try {
-      const newUser = await api.signup(name, email, pass, mobile, marketingConsent);
-      setCurrentUser(newUser);
+      await api.signup(name, email, pass, mobile, marketingConsent);
+      // Auth listener handles the rest
       setAuthModalOpen(false);
       addToast(`Account created successfully! Welcome, ${name}!`);
-      // Reset user data on new signup
-      setCartItems([]);
-      setLikedItems([]);
-      setOrders([]);
     } catch (error) {
       addToast((error as Error).message, 'error');
     }
@@ -711,13 +724,7 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     await api.logout();
-    setCurrentUser(null);
-    setCartItems([]);
-    setLikedItems([]);
-    setOrders([]);
-    setAllUsers([]);
-    setAllOrders([]);
-    setNotifiedAbandonedItems([]);
+    // Auth listener handles clearing state
     setPage('home');
     addToast('You have been logged out.');
   };
@@ -1450,7 +1457,7 @@ const App: React.FC = () => {
     <>
       <Header 
         cartCount={cartItems.length}
-        likedCount={likedItems.length}
+      likedCount={validLikedCount}        
         currentUser={currentUser}
         onLogout={handleLogout}
         onAuthClick={() => setAuthModalOpen(true)}

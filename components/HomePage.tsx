@@ -116,7 +116,14 @@ const HomePage: React.FC<HomePageProps> = ({ homepageConfig, allProducts, brands
   }
   
   const newlyLaunched = [...allProducts].sort((a,b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime()).slice(0, 10);
-  const bestSelling = [...allProducts].sort((a,b) => b.rating - a.rating).slice(0, 10);
+  
+  // FIX: Filter 'bestSelling' to strictly include only Smartphones.
+  // Previously it was sorting all products, causing watches to appear in the "Best Selling Phones" section.
+  const bestSelling = allProducts
+    .filter(p => p.product.category === 'Smartphones')
+    .sort((a,b) => b.rating - a.rating)
+    .slice(0, 10);
+
   const topSmartWatches = allProducts.filter(p => p.product.category === 'Smartwatches').slice(0, 10);
   const refurbishedDeals = allProducts.filter(p => p.product.category === 'Refurbished Phones').slice(0, 10);
   
@@ -238,19 +245,23 @@ const HomePage: React.FC<HomePageProps> = ({ homepageConfig, allProducts, brands
             </AnimateOnScroll>
         </Suspense>
       )}
-      <AnimateOnScroll>
-       <ProductCarousel 
-        title="Explore Top Smartwatches"
-        products={topSmartWatches.length ? topSmartWatches : newlyLaunched} // fallback data
-        likedItems={likedItems}
-        onToggleLike={onToggleLike}
-        onAddToCart={onAddToCart}
-        onNotifyMe={onNotifyMe}
-        notificationList={notificationList}
-        compareList={compareList}
-        onToggleCompare={onToggleCompare}
-      />
-      </AnimateOnScroll>
+      
+      {/* Only show Smartwatches section if there are actual smartwatches. Do not use fallback data which can be misleading. */}
+      {topSmartWatches.length > 0 && (
+        <AnimateOnScroll>
+        <ProductCarousel 
+            title="Explore Top Smartwatches"
+            products={topSmartWatches}
+            likedItems={likedItems}
+            onToggleLike={onToggleLike}
+            onAddToCart={onAddToCart}
+            onNotifyMe={onNotifyMe}
+            notificationList={notificationList}
+            compareList={compareList}
+            onToggleCompare={onToggleCompare}
+        />
+        </AnimateOnScroll>
+      )}
     </div>
   );
 };

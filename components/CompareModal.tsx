@@ -34,7 +34,7 @@ const CompareModal: React.FC<CompareModalProps> = ({ products, onClose, onAddToC
                                         return (
                                             <th key={p.id} className="text-center">
                                                 <a href={`#/product/${p.id}`} onClick={onClose}>
-                                                    <ImageResolver publicId={imagePublicId} alt={p.name} className="w-32 h-32 object-contain mx-auto mb-2" width={250} loading="lazy" decoding="async" />
+                                                    <ImageResolver publicId={imagePublicId} alt={p.name} className="w-32 h-32 object-contain mx-auto mb-2" width={320} height={320} sizes="128px" loading="lazy" decoding="async" />
                                                     <p className="font-bold text-blue-600 hover:underline">{p.name}</p>
                                                 </a>
                                             </th>
@@ -80,20 +80,22 @@ const CompareModal: React.FC<CompareModalProps> = ({ products, onClose, onAddToC
                                     {products.map(p => {
                                         const variantToAdd = (p.variants || []).find(v => (v.inventory || []).some(s => s.quantity > 0));
                                         return (
-                                            <td key={p.id} className="text-center p-4">
+                                            <td key={p.id} className="text-center p-4 align-bottom">
                                                 <div>
                                                     <button
                                                         onClick={(e) => { if (variantToAdd) { onAddToCart(p, variantToAdd, e); } }}
                                                         disabled={!variantToAdd}
-                                                        className="CartBtn mx-auto disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                                        className={`w-full font-bold py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2 text-sm shadow-sm ${
+                                                            variantToAdd 
+                                                            ? 'bg-yellow-400 text-black hover:bg-yellow-500' 
+                                                            : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                        }`}
                                                     >
-                                                        <span className="IconContainer">
-                                                            <ShoppingCartIcon className="icon h-6 w-6 text-gray-900" />
-                                                        </span>
-                                                        <span className="text">{variantToAdd ? 'Add to Cart' : 'Out of Stock'}</span>
+                                                        <ShoppingCartIcon className="h-4 w-4" />
+                                                        {variantToAdd ? 'Add to Cart' : 'Out of Stock'}
                                                     </button>
                                                 </div>
-                                                <button onClick={() => onToggleLike(p.id)} className="mt-2 text-sm text-gray-600 hover:text-red-500 flex items-center justify-center w-full">
+                                                <button onClick={() => onToggleLike(p.id)} className="mt-3 text-sm text-gray-600 hover:text-red-500 flex items-center justify-center w-full transition-colors">
                                                     <HeartIcon className={`w-4 h-4 mr-1 ${likedItems.includes(p.id) ? 'text-red-500 fill-current' : ''}`} />
                                                     {likedItems.includes(p.id) ? 'In Wishlist' : 'Add to Wishlist'}
                                                 </button>
@@ -111,4 +113,4 @@ const CompareModal: React.FC<CompareModalProps> = ({ products, onClose, onAddToC
     );
 };
 
-export default CompareModal;    
+export default CompareModal;

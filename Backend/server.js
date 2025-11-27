@@ -204,10 +204,13 @@ app.post('/api/generate-content', async (req, res) => {
         } catch (error) {
             attempt++;
             
-            const isRetryable = error.message && (error.message.includes('UNAVAILABLE') || error.message.includes('overloaded') || error.message.includes('503'));
+            // Allow retry on almost any error (timeout, network, 500, 503) to be more robust
+            // Only stop if it's a 4xx client error (e.g. invalid key, bad request) which shouldn't happen with correct server config.
+            const isClientError = error.response?.status >= 400 && error.response?.status < 500;
+            const isRetryable = !isClientError;
 
             if (isRetryable && attempt < maxRetries) {
-                console.warn(`Gemini API call attempt ${attempt} failed. Retrying in ${delay / 1000}s...`);
+                console.warn(`Gemini API call attempt ${attempt} failed: ${error.message}. Retrying in ${delay / 1000}s...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 delay *= 2; // Exponential backoff
             } else {

@@ -238,8 +238,26 @@ export const updateStore = async (updatedStore: Store): Promise<Store> => {
 };
 
 // --- AUTH APIS ---
+// FIX: Added a realtime subscription method for auth state to fix glitches where the app gets out of sync
+// with the user's login status (e.g., on page refresh).
+export const subscribeToAuthChanges = (callback: (user: User | null) => void) => {
+    return onAuthStateChanged(getFirebaseAuth(), async (user) => {
+        if (user) {
+            const userDoc = await getDoc(doc(getFirebaseDb(), COLLECTIONS.USERS, user.uid));
+            if (userDoc.exists()) {
+                callback(userDoc.data() as User);
+            } else {
+                callback(null); // User exists in Auth but not Firestore
+            }
+        } else {
+            callback(null);
+        }
+    });
+};
+
 export const getCurrentUser = async (): Promise<User | null> => {
     return new Promise((resolve) => {
+        // Use a one-time check that cleans up immediately
         const unsubscribe = onAuthStateChanged(getFirebaseAuth(), async (user) => {
             unsubscribe();
             if (user) {
@@ -345,20 +363,25 @@ export const getCart = async (userId: number): Promise<CartItem[]> => {
 };
 
 export const addToCart = async (userId: number, product: Product, variant: ProductVariant): Promise<CartItem[]> => {
-    const uid = await _getUidFromNumericId(userId);
-    if (!uid) throw new Error("User not found");
-    const docRef = doc(getFirebaseDb(), COLLECTIONS.CARTS, uid);
-    const docSnap = await getDoc(docRef);
-    const userCart = docSnap.exists() ? ((docSnap.data() as any).items as CartItem[]) : [];
+    try {
+        const uid = await _getUidFromNumericId(userId);
+        if (!uid) throw new Error("User not found");
+        const docRef = doc(getFirebaseDb(), COLLECTIONS.CARTS, uid);
+        const docSnap = await getDoc(docRef);
+        const userCart = docSnap.exists() ? ((docSnap.data() as any).items as CartItem[]) : [];
 
-    const existingItemIndex = userCart.findIndex(item => item.variant.id === variant.id);
-    if (existingItemIndex > -1) {
-        userCart[existingItemIndex].quantity += 1;
-    } else {
-        userCart.push({ product, variant, quantity: 1, dateAdded: new Date().toISOString() });
+        const existingItemIndex = userCart.findIndex(item => item.variant.id === variant.id);
+        if (existingItemIndex > -1) {
+            userCart[existingItemIndex].quantity += 1;
+        } else {
+            userCart.push({ product, variant, quantity: 1, dateAdded: new Date().toISOString() });
+        }
+        await setDoc(docRef, { items: cleanData(userCart) });
+        return userCart;
+    } catch (error) {
+        console.error("Error adding to cart:", error);
+        throw new Error("Failed to add item to cart. Please check your connection.");
     }
-    await setDoc(docRef, { items: cleanData(userCart) });
-    return userCart;
 };
 
 export const removeFromCart = async (userId: number, variantId: string): Promise<CartItem[]> => {
@@ -405,19 +428,24 @@ export const getWishlist = async (userId: number): Promise<number[]> => {
 };
 
 export const toggleWishlist = async (userId: number, productId: number): Promise<number[]> => {
-    const uid = await _getUidFromNumericId(userId);
-    if (!uid) throw new Error("User not found");
-    const docRef = doc(getFirebaseDb(), COLLECTIONS.WISHLISTS, uid);
-    const docSnap = await getDoc(docRef);
-    let userWishlist = docSnap.exists() ? ((docSnap.data() as any).productIds as number[]) : [];
+    try {
+        const uid = await _getUidFromNumericId(userId);
+        if (!uid) throw new Error("User not found");
+        const docRef = doc(getFirebaseDb(), COLLECTIONS.WISHLISTS, uid);
+        const docSnap = await getDoc(docRef);
+        let userWishlist = docSnap.exists() ? ((docSnap.data() as any).productIds as number[]) : [];
 
-    if (userWishlist.includes(productId)) {
-        userWishlist = userWishlist.filter(id => id !== productId);
-    } else {
-        userWishlist.push(productId);
+        if (userWishlist.includes(productId)) {
+            userWishlist = userWishlist.filter(id => id !== productId);
+        } else {
+            userWishlist.push(productId);
+        }
+        await setDoc(docRef, { productIds: userWishlist });
+        return userWishlist;
+    } catch (error) {
+        console.error("Error toggling wishlist:", error);
+        throw new Error("Failed to update wishlist. Please try again.");
     }
-    await setDoc(docRef, { productIds: userWishlist });
-    return userWishlist;
 };
 
 // --- ORDER APIS ---

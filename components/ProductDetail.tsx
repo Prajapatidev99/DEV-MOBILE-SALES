@@ -1,3 +1,4 @@
+
 import React, { Suspense } from 'react';
 import type { Product, Review, User, ProductVariant } from '../types';
 import { ShoppingCartIcon, StarIcon, CompareIcon } from './icons';
@@ -48,7 +49,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
     compareList,
     onToggleCompare
 }) => {
-  const [selectedVariant, setSelectedVariant] = React.useState<ProductVariant>(() => (product.variants || []).find(v => (v.inventory || []).some(s => s.quantity > 0)) || (product.variants || [])[0]);
+  const [selectedVariant, setSelectedVariant] = React.useState<ProductVariant | undefined>(() => (product.variants || []).find(v => (v.inventory || []).some(s => s.quantity > 0)) || (product.variants || [])[0]);
   const [pinCode, setPinCode] = React.useState('');
   const [deliveryStatus, setDeliveryStatus] = React.useState<'idle' | 'checking' | 'available' | 'unavailable'>('idle');
 
@@ -61,6 +62,16 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
     if (userPinCode) setPinCode(userPinCode);
     else setPinCode('');
   }, [product.id, userPinCode]);
+
+  // Defensive Check: If data is corrupted and no variant exists
+  if (!selectedVariant) {
+      return (
+          <div className="text-center py-20">
+              <h2 className="text-2xl font-bold text-gray-800">Currently Unavailable</h2>
+              <p className="text-gray-600">We couldn't load the details for this product. Please try again later.</p>
+          </div>
+      );
+  }
 
   const options = React.useMemo<{ [key: string]: { value: string, colorCode?: string }[] }>(() => {
     const allOptions: { [key: string]: { value: string, colorCode?: string }[] } = {};
@@ -78,6 +89,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
   }, [product.variants]);
 
   const handleOptionSelect = (key: string, value: string) => {
+    if (!selectedVariant) return;
     const currentAttributes = { ...selectedVariant.attributes };
     currentAttributes[key as keyof typeof currentAttributes] = value;
     
@@ -111,11 +123,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
   const getDeliveryMessage = () => {
       switch(deliveryStatus) {
           case 'available':
-              return <p className="text-green-600 mt-2 text-sm">Great! Delivery is available to your area.</p>;
+              return <p className="text-green-600 mt-2 text-sm font-medium animate-fade-in">Great! Delivery is available to your area.</p>;
           case 'unavailable':
-              return <p className="text-red-600 mt-2 text-sm">Sorry, delivery is not available for this PIN code.</p>;
+              return <p className="text-red-600 mt-2 text-sm font-medium animate-fade-in">Sorry, delivery is not available for this PIN code.</p>;
           case 'checking':
-              return <p className="text-gray-500 mt-2 text-sm">Checking...</p>;
+              return <p className="text-gray-500 mt-2 text-sm animate-pulse">Checking availability...</p>;
           default:
               return null;
       }
@@ -265,7 +277,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
                <div className="sm:col-span-3 w-full">
                   {isInStock ? (
                       <button
-                        onClick={(e) => onAddToCart(product, selectedVariant, e)}
+                        onClick={(e) => onAddToCart(product, selectedVariant!, e)}
                         className="CartBtn CartBtn-lg w-full"
                       >
                         <span className="IconContainer">
@@ -305,17 +317,18 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
               <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200 space-y-4">
                   <div>
                       <h3 className="font-semibold text-gray-800 mb-2">Check Delivery Availability</h3>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-3">
                           <input 
                             type="text" 
                             value={pinCode}
                             onChange={(e) => setPinCode(e.target.value)}
-                            placeholder="Enter 6-digit PIN code"
-                            className="flex-grow px-3 py-2 bg-white text-gray-800 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Enter PIN code"
+                            className="flex-grow px-4 py-3 bg-white text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                             maxLength={6}
+                            inputMode="numeric"
                            />
-                          <button onClick={handlePinCodeCheck} disabled={deliveryStatus === 'checking'} className="bg-gray-800 text-white font-semibold py-2 px-4 rounded-md hover:bg-black disabled:bg-gray-400">
-                            Check
+                          <button onClick={handlePinCodeCheck} disabled={deliveryStatus === 'checking'} className="bg-gray-900 text-white font-bold py-3 px-6 rounded-lg hover:bg-black disabled:bg-gray-400 w-full sm:w-auto whitespace-nowrap transition-colors shadow-sm active:scale-95 transition-transform">
+                            {deliveryStatus === 'checking' ? 'Checking...' : 'Check'}
                           </button>
                       </div>
                       {getDeliveryMessage()}
