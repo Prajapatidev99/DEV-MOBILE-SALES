@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
 
-# Point to the dynamic sitemap on your backend
-Sitemap: https://dev-mobile-sales.onrender.com/sitemap.xml
+# Point to the sitemap on the main domain (which redirects to backend)
+Sitemap: https://www.devmobile.shop/sitemap.xml
