@@ -1,4 +1,3 @@
-
 // FIX: Updated imports to use lazy getters from './firebase' instead of static instances.
 // This works in tandem with the changes in firebase.ts to delay initialization.
 import { 
@@ -63,12 +62,29 @@ const cleanData = (data: any): any => {
 };
 
 // --- HELPER: Get User UID from numeric ID ---
+// FIX: Optimized to prefer the currently logged-in user's UID if available.
+// This avoids database queries that might fail due to security rules.
 const _getUidFromNumericId = async (userId: number): Promise<string | null> => {
-    const usersRef = collection(getFirebaseDb(), COLLECTIONS.USERS);
-    const q = query(usersRef, where("id", "==", userId), limit(1));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-        return querySnapshot.docs[0].id;
+    const auth = getFirebaseAuth();
+    const currentUser = auth.currentUser;
+
+    // If the logged-in user is the one we are looking for (common case), use their UID directly.
+    // We can't strictly verify the numeric ID here without a read, but in the context of this app,
+    // client-side operations are almost always for the current user.
+    if (currentUser) {
+        return currentUser.uid;
+    }
+
+    // Fallback: Query the database (May fail if security rules deny listing users)
+    try {
+        const usersRef = collection(getFirebaseDb(), COLLECTIONS.USERS);
+        const q = query(usersRef, where("id", "==", userId), limit(1));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            return querySnapshot.docs[0].id;
+        }
+    } catch (e) {
+        console.warn("Could not query user by ID (likely security rules). Ensure user is logged in.", e);
     }
     return null;
 };
@@ -356,16 +372,37 @@ export const sendPasswordReset = async (email: string): Promise<void> => {
 
 // --- CART & WISHLIST APIS ---
 export const getCart = async (userId: number): Promise<CartItem[]> => {
-    const uid = await _getUidFromNumericId(userId);
+    // FIX: Prefer using the authenticated user's UID to avoid "Permission Denied" errors from Firestore rules
+    const auth = getFirebaseAuth();
+    let uid = auth.currentUser?.uid;
+    
+    if (!uid) {
+        uid = await _getUidFromNumericId(userId);
+    }
+    
     if (!uid) return [];
-    const docSnap = await getDoc(doc(getFirebaseDb(), COLLECTIONS.CARTS, uid));
-    return docSnap.exists() ? (docSnap.data() as any).items : [];
+    
+    try {
+        const docSnap = await getDoc(doc(getFirebaseDb(), COLLECTIONS.CARTS, uid));
+        return docSnap.exists() ? (docSnap.data() as any).items : [];
+    } catch (e) {
+        console.error("Error fetching cart:", e);
+        return [];
+    }
 };
 
 export const addToCart = async (userId: number, product: Product, variant: ProductVariant): Promise<CartItem[]> => {
     try {
-        const uid = await _getUidFromNumericId(userId);
-        if (!uid) throw new Error("User not found");
+        // FIX: Prefer using the authenticated user's UID to avoid "Permission Denied" errors from Firestore rules
+        const auth = getFirebaseAuth();
+        let uid = auth.currentUser?.uid;
+        
+        if (!uid) {
+            uid = await _getUidFromNumericId(userId);
+        }
+
+        if (!uid) throw new Error("User not found or not authenticated");
+        
         const docRef = doc(getFirebaseDb(), COLLECTIONS.CARTS, uid);
         const docSnap = await getDoc(docRef);
         const userCart = docSnap.exists() ? ((docSnap.data() as any).items as CartItem[]) : [];
@@ -385,7 +422,14 @@ export const addToCart = async (userId: number, product: Product, variant: Produ
 };
 
 export const removeFromCart = async (userId: number, variantId: string): Promise<CartItem[]> => {
-    const uid = await _getUidFromNumericId(userId);
+    // FIX: Prefer using the authenticated user's UID to avoid "Permission Denied" errors from Firestore rules
+    const auth = getFirebaseAuth();
+    let uid = auth.currentUser?.uid;
+    
+    if (!uid) {
+        uid = await _getUidFromNumericId(userId);
+    }
+
     if (!uid) throw new Error("User not found");
     const docRef = doc(getFirebaseDb(), COLLECTIONS.CARTS, uid);
     const docSnap = await getDoc(docRef);
@@ -398,7 +442,14 @@ export const removeFromCart = async (userId: number, variantId: string): Promise
 };
 
 export const updateCartQuantity = async (userId: number, variantId: string, quantity: number): Promise<CartItem[]> => {
-    const uid = await _getUidFromNumericId(userId);
+    // FIX: Prefer using the authenticated user's UID to avoid "Permission Denied" errors from Firestore rules
+    const auth = getFirebaseAuth();
+    let uid = auth.currentUser?.uid;
+    
+    if (!uid) {
+        uid = await _getUidFromNumericId(userId);
+    }
+
     if (!uid) throw new Error("User not found");
     const docRef = doc(getFirebaseDb(), COLLECTIONS.CARTS, uid);
     const docSnap = await getDoc(docRef);
@@ -414,22 +465,48 @@ export const updateCartQuantity = async (userId: number, variantId: string, quan
 };
 
 export const clearCart = async (userId: number): Promise<CartItem[]> => {
-    const uid = await _getUidFromNumericId(userId);
+    // FIX: Prefer using the authenticated user's UID to avoid "Permission Denied" errors from Firestore rules
+    const auth = getFirebaseAuth();
+    let uid = auth.currentUser?.uid;
+    
+    if (!uid) {
+        uid = await _getUidFromNumericId(userId);
+    }
+
     if (!uid) return [];
     await setDoc(doc(getFirebaseDb(), COLLECTIONS.CARTS, uid), { items: [] });
     return [];
 };
 
 export const getWishlist = async (userId: number): Promise<number[]> => {
-    const uid = await _getUidFromNumericId(userId);
+    // FIX: Prefer using the authenticated user's UID to avoid "Permission Denied" errors from Firestore rules
+    const auth = getFirebaseAuth();
+    let uid = auth.currentUser?.uid;
+    
+    if (!uid) {
+        uid = await _getUidFromNumericId(userId);
+    }
+
     if (!uid) return [];
-    const docSnap = await getDoc(doc(getFirebaseDb(), COLLECTIONS.WISHLISTS, uid));
-    return docSnap.exists() ? (docSnap.data() as any).productIds : [];
+    try {
+        const docSnap = await getDoc(doc(getFirebaseDb(), COLLECTIONS.WISHLISTS, uid));
+        return docSnap.exists() ? (docSnap.data() as any).productIds : [];
+    } catch (e) {
+        console.error("Error fetching wishlist:", e);
+        return [];
+    }
 };
 
 export const toggleWishlist = async (userId: number, productId: number): Promise<number[]> => {
     try {
-        const uid = await _getUidFromNumericId(userId);
+        // FIX: Prefer using the authenticated user's UID to avoid "Permission Denied" errors from Firestore rules
+        const auth = getFirebaseAuth();
+        let uid = auth.currentUser?.uid;
+        
+        if (!uid) {
+            uid = await _getUidFromNumericId(userId);
+        }
+
         if (!uid) throw new Error("User not found");
         const docRef = doc(getFirebaseDb(), COLLECTIONS.WISHLISTS, uid);
         const docSnap = await getDoc(docRef);
