@@ -9,7 +9,7 @@ lerna-debug.log*
 Backend/.env
 Backend/serviceAccount.json
 .env
-
+render.yaml
 node_modules
 dist
 dist-ssr
