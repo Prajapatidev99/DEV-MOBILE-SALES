@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
 
-# Point to the sitemap on the main domain (handled by vercel.json rewrite)
-Sitemap: https://www.devmobile.shop/sitemap.xml
+# Point directly to the backend sitemap to ensure crawlers can read it
+Sitemap: https://dev-mobile-sales.onrender.com/sitemap.xml
