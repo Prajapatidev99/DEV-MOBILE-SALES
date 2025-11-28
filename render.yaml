@@ -46,7 +46,7 @@ services:
           property: url
     routes:
       # Redirect sitemap.xml to the backend service
-      # This MUST come before the catch-all rewrite
+      # This MUST come before the catch-all rewrite to work
       - type: redirect
         source: /sitemap.xml
         destination: https://dev-mobile-sales.onrender.com/sitemap.xml
