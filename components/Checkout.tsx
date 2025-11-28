@@ -27,9 +27,10 @@ interface CheckoutProps {
     currentUser: User | null;
     coupons: Coupon[];
     userLocation: { latitude: number, longitude: number } | null;
+    onUpdateUser: (user: User) => void;
 }
 
-const Checkout: React.FC<CheckoutProps> = ({ cartItems, subtotal, shippingCost, onPlaceOrder, onCancel, addToast, userPinCode, onPinCodeChange, stores, currentUser, coupons }) => {
+const Checkout: React.FC<CheckoutProps> = ({ cartItems, subtotal, shippingCost, onPlaceOrder, onCancel, addToast, userPinCode, onPinCodeChange, stores, currentUser, coupons, onUpdateUser }) => {
     const [deliveryMethod, setDeliveryMethod] = React.useState<'shipping' | 'pickup'>('shipping');
     const [selectedStore, setSelectedStore] = React.useState<number | undefined>(stores[0]?.id);
     const [isLoading, setIsLoading] = React.useState(false);
@@ -57,7 +58,10 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, subtotal, shippingCost, 
     // Effect 1: Set initial selected address when addresses load
     React.useEffect(() => {
         const defaultAddress = currentUser?.addresses?.find(addr => addr.isDefault);
-        setSelectedAddressId(defaultAddress?.id || 'new');
+        // Only switch to default if we haven't manually selected 'new' via the add action
+        if (!justAddedAddress.current) {
+             setSelectedAddressId(defaultAddress?.id || 'new');
+        }
     }, [currentUser?.addresses]);
 
     // Effect 2: Update form when selected address changes
@@ -187,18 +191,32 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, subtotal, shippingCost, 
     };
 
     const handleSaveNewAddress = (newAddressData: Omit<Address, 'id' | 'isDefault' | 'country'>) => {
-        const { fullName, addressLine1, addressLine2, landmark, city, pincode } = newAddressData;
-        const nameParts = fullName.split(' ');
-        
+        if (!currentUser) return;
+
+        // 1. Create a full address object
+        const newAddress: Address = {
+            ...newAddressData,
+            id: Date.now(),
+            country: 'India',
+            isDefault: (currentUser.addresses || []).length === 0 // Make default if it's the first one
+        };
+
+        // 2. Persist to User Profile
+        const updatedAddresses = [...(currentUser.addresses || []), newAddress];
+        onUpdateUser({ ...currentUser, addresses: updatedAddresses });
+
+        // 3. Immediately select it for this order and fill form
         justAddedAddress.current = true;
+        setSelectedAddressId(newAddress.id);
+        
+        const nameParts = newAddress.fullName.split(' ');
         setFirstName(nameParts[0] || '');
         setLastName(nameParts.slice(1).join(' ') || '');
-        setAddress([addressLine1, addressLine2, landmark].filter(Boolean).join(', '));
-        setCity(city);
-        setPostalCode(pincode);
-        setSelectedAddressId('new');
+        setAddress([newAddress.addressLine1, newAddress.addressLine2, newAddress.landmark].filter(Boolean).join(', '));
+        setCity(newAddress.city);
+        setPostalCode(newAddress.pincode);
         
-        addToast('New delivery address has been set for this order.', 'success');
+        addToast('Address saved to profile and applied!', 'success');
     };
 
     const inputClasses = "p-2 bg-gray-50 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full";
@@ -224,7 +242,9 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, subtotal, shippingCost, 
                                         <ImageResolver 
                                             publicId={imagePublicId} 
                                             alt={item.product.name}
-                                            width={100} 
+                                            width={120} 
+                                            height={120}
+                                            sizes="48px"
                                             className="w-12 h-12 rounded-md object-cover mr-3" 
                                             loading="lazy"
                                         />
@@ -340,7 +360,6 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, subtotal, shippingCost, 
                 setIsAddressModalOpen(false);
             }}
             onSaveNewAddress={(data) => {
-                // NOTE: This adds the address for this order only, it does not persist to the user's account.
                 handleSaveNewAddress(data);
                 setIsAddressModalOpen(false);
             }}
