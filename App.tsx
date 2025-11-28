@@ -1316,6 +1316,7 @@ const App: React.FC = () => {
                 currentUser={currentUser}
                 coupons={coupons}
                 userLocation={userLocation}
+                onUpdateUser={handleUpdateUser} // Added prop to fix TS error
              />;
     }
 
