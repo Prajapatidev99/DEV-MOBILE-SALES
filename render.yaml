@@ -1,0 +1,56 @@
+services:
+  # -----------------------------
+  # 1. Backend Web Service (Node.js)
+  # -----------------------------
+  - type: web
+    name: devmobile-backend
+    env: node
+    plan: free
+    root: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        fromService:
+          type: static
+          name: devmobile-frontend
+          property: url
+      # You must enter these values in the Render Dashboard when prompted
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: BACKEND_API_SECRET
+        sync: false
+
+  # -----------------------------
+  # 2. Frontend Static Site (React/Vite)
+  # -----------------------------
+  - type: static
+    name: devmobile-frontend
+    env: static
+    plan: free
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        fromService:
+          type: web
+          name: devmobile-backend
+          property: url
+    routes:
+      # Redirect sitemap.xml to the backend service
+      # This MUST come before the catch-all rewrite
+      - type: redirect
+        source: /sitemap.xml
+        destination: https://dev-mobile-sales.onrender.com/sitemap.xml
+      # SPA Fallback for all other routes
+      - type: rewrite
+        source: "/*"
+        destination: /index.html
