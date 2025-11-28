@@ -1,3 +1,4 @@
+
 // FIX: Changed React import to `import * as React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
 import * as React from 'react';
 import type { CartItem, Order, Store, User, Address, Coupon } from '../types';
@@ -177,8 +178,11 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, subtotal, shippingCost, 
                 // Store details for the simulated payment page
                 sessionStorage.setItem('pendingOrderId', newOrder.id);
                 sessionStorage.setItem('pendingOrderTotal', newOrder.total.toString());
-                // Redirect to the simulated gateway
-                window.location.hash = '/payment-gateway';
+                
+                // Redirect using history API for Clean URLs
+                window.history.pushState({}, '', '/payment-gateway');
+                window.dispatchEvent(new Event('popstate'));
+                
             } else {
                 addToast("Failed to create order. Please try again.", "error");
                 setIsLoading(false);

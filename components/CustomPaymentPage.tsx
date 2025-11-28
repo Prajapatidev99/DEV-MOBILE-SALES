@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 
 const UPI_ID = 'dev358438@okhdfcbank'; // Updated UPI ID as per request
@@ -97,7 +98,8 @@ const CustomPaymentPage: React.FC<CustomPaymentPageProps> = ({ onPaymentSubmit }
     
     const handleCancel = () => {
         clearPendingOrderSession(); // Explicitly clear session on cancel
-        window.location.hash = '#/cart';
+        window.history.pushState({}, '', '/cart');
+        window.dispatchEvent(new Event('popstate'));
     };
 
     const handleCopyUpi = () => {
@@ -120,7 +122,7 @@ const CustomPaymentPage: React.FC<CustomPaymentPageProps> = ({ onPaymentSubmit }
                 <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm text-center p-8">
                     <h2 className="text-2xl font-bold text-red-600 mb-4">Payment Session Expired</h2>
                     <p className="text-gray-600 mb-6">Your payment session has timed out. Please return to your cart to restart the checkout process.</p>
-                    <a href="#/cart" className="w-full inline-block bg-yellow-400 text-black font-bold py-3 rounded-md hover:bg-yellow-500 transition-colors">
+                    <a href="/cart" className="w-full inline-block bg-yellow-400 text-black font-bold py-3 rounded-md hover:bg-yellow-500 transition-colors">
                         Return to Cart
                     </a>
                 </div>
@@ -174,7 +176,7 @@ const CustomPaymentPage: React.FC<CustomPaymentPageProps> = ({ onPaymentSubmit }
                                 className="inline-flex items-center justify-center bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition-colors"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                 </svg>
                                 Pay ₹{orderTotal ? Number(orderTotal).toLocaleString('en-IN') : '...'} via UPI App
                             </a>
@@ -261,7 +263,7 @@ const CustomPaymentPage: React.FC<CustomPaymentPageProps> = ({ onPaymentSubmit }
 
                 {/* Footer */}
                 <footer className="px-6 py-4 bg-gray-50/50 rounded-b-xl text-center text-xs text-gray-500 flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                     <span>100% Secure Payments</span>
                 </footer>
             </div>

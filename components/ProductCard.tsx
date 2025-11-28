@@ -1,8 +1,10 @@
+
 // FIX: Changed React import to `import React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
 import React from 'react';
 import type { Product, DisplayableProduct, ProductVariant } from '../types';
 import { HeartIcon, ShoppingCartIcon, CompareIcon } from './icons';
 import ImageResolver from './ImageResolver';
+import { createSlug } from '../utils';
 
 interface ProductCardProps {
   product: Product | DisplayableProduct;
@@ -47,7 +49,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   if (isVariantCard) {
     parentId = product.parentId;
-    href = `#/product/${parentId}`;
+    // SLUG UPDATE: Use product name and ID
+    href = `/product/${createSlug(product.product.name, parentId)}`;
     imagePublicId = product.imagePublicId;
     name = product.product.name; // Use base product name for a cleaner look
     priceDisplay = `₹${product.price.toLocaleString('en-IN')}`;
@@ -64,7 +67,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
     discountLabel = product.variant.discountLabel;
   } else {
     parentId = product.id;
-    href = `#/product/${parentId}`;
+    // SLUG UPDATE: Use product name and ID
+    href = `/product/${createSlug(product.name, parentId)}`;
     const variants = product.variants || [];
     const prices = variants.map(v => v.price);
     const minPrice = Math.min(...prices);
@@ -140,6 +144,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <ImageResolver 
               publicId={imagePublicId}
               width={400}
+              height={400}
+              sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 240px"
               className="w-full h-40 object-contain transition-transform duration-300 group-hover:scale-110"
               alt={name} 
               loading="lazy"
@@ -219,7 +225,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNotifyMe(parentId); }}
                 disabled={isNotifying}
-                className="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full bg-blue-500 text-white font-bold py-3 px-6 rounded-md hover:bg-blue-700 transition-transform transform hover:scale-105 duration-300 flex items-center justify-center text-lg disabled:bg-gray-400 disabled:cursor-not-allowed h-[52px]"
                 >
                 {isNotifying ? 'On Waitlist' : 'Notify Me'}
                 </button>

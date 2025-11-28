@@ -51,7 +51,8 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({ order, currentUse
 
   const handleDownloadInvoice = () => {
     sessionStorage.setItem('invoice_order', JSON.stringify(order));
-    window.open('#/invoice', '_blank');
+    // FIX: Updated to use Clean URL '/invoice' instead of Hash URL '#/invoice'
+    window.open('/invoice', '_blank');
   };
 
   return (

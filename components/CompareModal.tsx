@@ -1,7 +1,9 @@
+
 import * as React from 'react';
 import type { Product, ProductVariant } from '../types';
 import { ShoppingCartIcon, StarIcon, HeartIcon } from './icons';
 import ImageResolver from './ImageResolver';
+import { createSlug } from '../utils';
 
 interface CompareModalProps {
     products: Product[];
@@ -31,9 +33,10 @@ const CompareModal: React.FC<CompareModalProps> = ({ products, onClose, onAddToC
                                     <th className="w-1/4">Feature</th>
                                     {products.map(p => {
                                         const imagePublicId = (p.imagePublicIds && p.imagePublicIds.length > 0) ? p.imagePublicIds[0] : '';
+                                        const productSlug = createSlug(p.name, p.id);
                                         return (
                                             <th key={p.id} className="text-center">
-                                                <a href={`#/product/${p.id}`} onClick={onClose}>
+                                                <a href={`/product/${productSlug}`} onClick={onClose}>
                                                     <ImageResolver publicId={imagePublicId} alt={p.name} className="w-32 h-32 object-contain mx-auto mb-2" width={320} height={320} sizes="128px" loading="lazy" decoding="async" />
                                                     <p className="font-bold text-blue-600 hover:underline">{p.name}</p>
                                                 </a>

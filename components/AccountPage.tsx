@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import type { User, Order, Address, CartItem } from '../types';
 import ImageResolver from './ImageResolver';
@@ -69,7 +70,7 @@ const ReturnRequestModal: React.FC<ReturnRequestModalProps> = ({ item, orderId, 
             <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
                 <h2 className="text-xl font-bold mb-4">Request Return</h2>
                 <div className="flex items-center gap-4 mb-4 pb-4 border-b">
-                    <ImageResolver publicId={imagePublicId} alt={item.product.name} className="w-16 h-16 rounded-md" width={150} />
+                    <ImageResolver publicId={imagePublicId} alt={item.product.name} className="w-16 h-16 rounded-md" width={160} height={160} sizes="64px" />
                     <div>
                         <p className="font-semibold">{item.product.name}</p>
                         <p className="text-sm text-gray-600">{Object.values(item.variant.attributes).filter(Boolean).join(' / ')}</p>
@@ -114,7 +115,7 @@ const OrderHistoryView: React.FC<{ orders: Order[], isLoading: boolean, onTrackO
     
     const handleDownloadInvoice = (order: Order) => {
         sessionStorage.setItem('invoice_order', JSON.stringify(order));
-        window.open('#/invoice', '_blank');
+        window.open('/invoice', '_blank');
     };
 
     const getReturnStatusBadge = (status: 'pending' | 'approved' | 'rejected') => {
@@ -163,7 +164,7 @@ const OrderHistoryView: React.FC<{ orders: Order[], isLoading: boolean, onTrackO
                                     return (
                                         <div key={item.variant.id} className="flex justify-between items-center text-sm">
                                             <div className="flex items-center gap-3">
-                                                <ImageResolver publicId={imagePublicId} alt={item.product.name} className="w-12 h-12 rounded-md hidden sm:block" width={100} />
+                                                <ImageResolver publicId={imagePublicId} alt={item.product.name} className="w-12 h-12 rounded-md hidden sm:block" width={120} height={120} sizes="48px" />
                                                 <div>
                                                     <p className="font-semibold">{item.product.name}</p>
                                                     <p className="text-xs text-gray-500">{Object.values(item.variant.attributes).filter(Boolean).join(' / ')}</p>
@@ -259,7 +260,7 @@ const MyReturnsView: React.FC<{ orders: Order[]; onBack: () => void }> = ({ orde
                                     {getStatusBadge(item.returnRequest!.status)}
                                 </div>
                                 <div className="flex items-center gap-4 mb-4 pb-4 border-b">
-                                    <ImageResolver publicId={imagePublicId} alt={item.product.name} className="w-16 h-16 rounded-md" width={150} />
+                                    <ImageResolver publicId={imagePublicId} alt={item.product.name} className="w-16 h-16 rounded-md" width={160} height={160} sizes="64px" />
                                     <div>
                                         <p className="font-semibold">{item.product.name}</p>
                                         <p className="text-sm text-gray-600">{Object.values(item.variant.attributes).filter(Boolean).join(' / ')}</p>
@@ -513,7 +514,7 @@ const MainAccountView: React.FC<MainViewProps> = ({ user, onNavigate, onLogout }
         { icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, title: "Saved Address", subtitle: "Manage delivery addresses", onClick: () => onNavigate('address') },
         { icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>, title: "My Coupons", subtitle: "Manage coupons for additional discounts", onClick: () => onNavigate('coupons') },
         { icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>, title: "Notification Settings", subtitle: "Manage marketing preferences", onClick: () => onNavigate('settings') },
-        { icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4s-1.79 4-4 4-4-1.79-4-4c0-1.191.445-2.262 1.156-3.043.192-.204.398-.415.626-.632z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V3m0 18v-3m-7.071-7.071L2.929 14.14m11.142 0l-2.071-2.071M6.343 6.343l2.071 2.071m5.657 5.657l2.07 2.07M12 21a9 9 0 110-18 9 9 0 010 18z" /></svg>, title: "Help and Support", subtitle: "Contact us for assistance", onClick: () => window.location.hash = '#/contact' },
+        { icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4s-1.79 4-4 4-4-1.79-4-4c0-1.191.445-2.262 1.156-3.043.192-.204.398-.415.626-.632z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V3m0 18v-3m-7.071-7.071L2.929 14.14m11.142 0l-2.071-2.071M6.343 6.343l2.071 2.071m5.657 5.657l2.07 2.07M12 21a9 9 0 110-18 9 9 0 010 18z" /></svg>, title: "Help and Support", subtitle: "Contact us for assistance", onClick: () => { window.history.pushState({}, '', '/contact'); window.dispatchEvent(new Event('popstate')); } },
     ];
     
     return (

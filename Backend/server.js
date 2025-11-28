@@ -1,3 +1,4 @@
+
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
@@ -44,12 +45,11 @@ try {
     } else {
         // Only warn if not in test environment
         if (process.env.NODE_ENV !== 'test') {
-             throw new Error("No serviceAccount.json file AND no FIREBASE_SERVICE_ACCOUNT_JSON env var found.");
+             console.warn("⚠️ WARNING: No serviceAccount.json file AND no FIREBASE_SERVICE_ACCOUNT_JSON env var found. Database features (Sitemap, etc.) will fail.");
         }
     }
 } catch (e) {
     console.error('❌ Firebase Admin initialization failed:', e.message);
-    console.error('Make sure serviceAccount.json is added as a Secret File in Render OR FIREBASE_SERVICE_ACCOUNT_JSON is set in Environment Variables.');
 }
 
 
@@ -97,6 +97,15 @@ const requireSecretKey = (req, res, next) => {
     next();
 };
 
+// Helper: Create Slug
+const createSlug = (name, id) => {
+    const slug = name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with hyphens
+        .replace(/(^-|-$)+/g, ''); // Remove leading/trailing hyphens
+    return `${slug}-${id}`;
+};
+
 // Health check endpoint
 app.get('/', (req, res) => {
     res.send('Dev Mobile Backend is running!');
@@ -108,6 +117,7 @@ app.get('/sitemap.xml', async (req, res) => {
         const baseUrl = process.env.FRONTEND_URL || 'https://www.devmobile.shop';
         
         // 1. Define Static Routes
+        // NOTE: These use Clean URLs (no # hash)
         const staticRoutes = [
             'home', 'shop', 'cart', 'wishlist', 'account', 
             'contact', 'faq', 'shipping', 'returns', 
@@ -121,7 +131,7 @@ app.get('/sitemap.xml', async (req, res) => {
         staticRoutes.forEach(route => {
             sitemap += `
   <url>
-    <loc>${baseUrl}/#/${route}</loc>
+    <loc>${baseUrl}/${route}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`;
@@ -133,13 +143,14 @@ app.get('/sitemap.xml', async (req, res) => {
             productsSnapshot.forEach(doc => {
                 const product = doc.data();
                 // Escape special characters in URL
-                const safeId = encodeURIComponent(product.id);
+                const safeSlug = createSlug(product.name, product.id);
                 // Last modified date (default to today if not found)
                 const lastMod = product.dateAdded ? product.dateAdded.split('T')[0] : new Date().toISOString().split('T')[0];
 
+                // NOTE: Using Clean URL format /product/:slug
                 sitemap += `
   <url>
-    <loc>${baseUrl}/#/product/${safeId}</loc>
+    <loc>${baseUrl}/product/${safeSlug}</loc>
     <lastmod>${lastMod}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
@@ -305,7 +316,5 @@ app.listen(PORT, () => {
      if (!process.env.GEMINI_API_KEY) {
         console.warn('⚠️ WARNING: Gemini API key (GEMINI_API_KEY) is missing. AI features will not work. Please add it to your .env file in the /backend directory.');
     }
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-        console.warn('⚠️ WARNING: Firebase Admin credentials (FIREBASE_SERVICE_ACCOUNT_JSON) are missing. Mobile login will not work. Please add it to your .env file in the /backend directory.');
-    }
+    // We already log warnings inside the try/catch block for DB init
 });

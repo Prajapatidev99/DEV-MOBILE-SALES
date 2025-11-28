@@ -3,6 +3,7 @@
 import React, { Suspense, lazy } from 'react';
 import * as api from './api';
 import { API_BASE_URL } from './api';
+import { getIdFromSlug, createSlug } from './utils';
 
 import type { Product, CartItem, User, Order, Review, Store, ChatMessage, Notification, ProductCategory, ProductVariant, DisplayableProduct, HomepageConfig, Coupon, Payout } from './types';
 import Header from './components/Header';
@@ -51,6 +52,7 @@ const Chatbot = lazy(() => import('./components/Chatbot'));
 const OrderTrackingModal = lazy(() => import('./components/OrderTrackingModal'));
 const CompareTray = lazy(() => import('./components/CompareTray'));
 const CompareModal = lazy(() => import('./components/CompareModal'));
+const MobileNumberPrompt = lazy(() => import('./components/MobileNumberPrompt'));
 
 
 const PRODUCTS_PER_PAGE = 12;
@@ -184,6 +186,7 @@ const App: React.FC = () => {
   const [isAuthModalOpen, setAuthModalOpen] = React.useState(false);
   const [isPinCodeModalOpen, setPinCodeModalOpen] = React.useState(false);
   const [userLocation, setUserLocation] = React.useState<{ latitude: number, longitude: number} | null>(null);
+  const [isMobilePromptOpen, setMobilePromptOpen] = React.useState(false); // NEW: State for mobile prompt
   
   // AI State
   const [recommendedProducts, setRecommendedProducts] = React.useState<Product[]>([]);
@@ -305,6 +308,12 @@ const App: React.FC = () => {
     const unsubscribe = api.subscribeToAuthChanges(async (user) => {
         setCurrentUser(user);
         if (user) {
+            // Check for missing mobile number (common with Google OAuth)
+            if (!user.mobile) {
+                // Add a small delay to ensure UI is ready
+                setTimeout(() => setMobilePromptOpen(true), 1500);
+            }
+
             // Load user-specific data whenever auth state confirms a user is logged in
             try {
                 const [userCart, userWishlist, userOrders] = await Promise.all([
@@ -334,6 +343,7 @@ const App: React.FC = () => {
             setOrders([]);
             setAllUsers([]);
             setAllOrders([]);
+            setMobilePromptOpen(false); // Close prompt on logout
         }
     });
     return () => unsubscribe();
@@ -421,11 +431,12 @@ const App: React.FC = () => {
         addToast(`You have new review requests for your recent purchases!`, 'success');
         deliveredOrdersNeedingReminder.forEach(order => {
           order.items.forEach(item => {
+            const productSlug = createSlug(item.product.name, item.product.id);
             handleAddNotification({
               type: 'review',
               title: `How was your ${item.product.name}?`,
               message: "We'd love to hear your thoughts. Please leave a review!",
-              link: `#/product/${item.product.id}`,
+              link: `/product/${productSlug}`, // Clean URL with Slug
             });
           });
           // Mark this order as having had a reminder sent
@@ -658,6 +669,7 @@ const App: React.FC = () => {
         const newSearches = [query, ...recentSearches].slice(0, 5);
         setRecentSearches(newSearches);
     }
+    navigate('/shop');
   };
 
   const handleSortChange = (option: string) => setSortOption(option);
@@ -665,7 +677,7 @@ const App: React.FC = () => {
     setSelectedBrand(brand);
     setCurrentPage(1);
     setSelectedCategory(null); // Clear category filter to show all products for the brand
-    window.location.hash = '#/shop';
+    navigate('/shop');
   };
   const handlePriceChange = (price: number) => setPriceLimit(price);
   const handleInStockChange = (show: boolean) => { setShowInStockOnly(show); setCurrentPage(1); };
@@ -726,6 +738,7 @@ const App: React.FC = () => {
     await api.logout();
     // Auth listener handles clearing state
     setPage('home');
+    navigate('/home');
     addToast('You have been logged out.');
   };
 
@@ -739,6 +752,15 @@ const App: React.FC = () => {
         addToast("Could not update profile.", "error");
         console.error("Failed to update user:", error);
     }
+  };
+  
+  const handleMobileSubmit = async (mobile: string) => {
+      if (currentUser) {
+          const updatedUser = { ...currentUser, mobile };
+          await handleUpdateUser(updatedUser);
+          setMobilePromptOpen(false);
+          addToast("Mobile number saved! You will now receive order updates.", "success");
+      }
   };
   
   const handleSetPinCode = (pinCode: string): boolean => {
@@ -845,8 +867,8 @@ const App: React.FC = () => {
         setCartItems(await api.clearCart(currentUser.id));
         setNotifiedAbandonedItems([]);
         setAppState('confirmed');
-        // FIX: Replaced direct page state mutation with a hash change to ensure the URL reflects the application state. This resolves an issue where the app could get stuck on the payment screen.
-        window.location.hash = '#/payment-success';
+        // Navigate to clean URL
+        navigate('/payment-success');
         addToast('Payment details submitted for verification!', 'success');
     } catch (error) {
         addToast('Failed to submit payment details.', 'error');
@@ -1009,62 +1031,86 @@ const App: React.FC = () => {
   };
 
 
-  // URL Hash Routing
-  React.useEffect(() => {
-    const handleLinkClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const anchor = target.closest('a');
-      if (target.closest('button') && anchor) {
-        e.preventDefault();
-        return;
-      }
-      
-      if (anchor && anchor.href.includes('#/')) {
-        e.preventDefault();
-        window.location.hash = anchor.href.substring(anchor.href.indexOf('#'));
-      }
-    };
-    
-    document.addEventListener('click', handleLinkClick);
-
-    const handleHashChange = () => {
+  // URL Routing Engine (Replaces Hash Routing)
+  const handleLocationChange = () => {
       window.scrollTo(0, 0);
-      const hash = window.location.hash.replace('#/', '');
-      const pathParts = hash.split('/');
-      const path = pathParts[0];
+      const path = window.location.pathname.substring(1); // Remove leading slash
+      const pathParts = path.split('/');
+      const rootPath = pathParts[0];
       const param = pathParts.slice(1).join('/');
 
-      if (path === 'product' && param) {
-        setSelectedProductId(parseInt(param, 10));
+      if (rootPath === 'product' && param) {
+        // PARSE SLUG: ID is at the end
+        const productId = getIdFromSlug(param);
+        setSelectedProductId(productId);
         setPage('product');
-      } else if (path === 'shop') {
+      } else if (rootPath === 'shop') {
           if (param) {
-              setSelectedCategory(param as ProductCategory);
+              const decodedCategory = decodeURIComponent(param) as ProductCategory;
+              setSelectedCategory(decodedCategory);
           } else {
               setSelectedCategory(null);
           }
           setPage('shop');
           setSelectedProductId(null);
           setAppState('browsing');
-      } else if (['home', 'cart', 'account', 'wishlist', 'contact', 'faq', 'shipping', 'security-guide', 'repair', 'terms', 'privacy', 'returns', 'blog', 'find-store', 'coupons', 'admin', 'seller', 'why-dev-mobile', 'track-order', 'invoice', 'payment-gateway', 'payment-success'].includes(path)) {
-        setPage(path as Page);
+      } else if (['home', 'cart', 'account', 'wishlist', 'contact', 'faq', 'shipping', 'security-guide', 'repair', 'terms', 'privacy', 'returns', 'blog', 'find-store', 'coupons', 'admin', 'seller', 'why-dev-mobile', 'track-order', 'invoice', 'payment-gateway', 'payment-success'].includes(rootPath)) {
+        setPage(rootPath as Page);
         setSelectedProductId(null);
-        if (path !== 'shop') {
+        if (rootPath !== 'shop') {
             setSelectedCategory(null);
         }
       } else {
-        setPage('home');
+        // Default route or root
+        if (rootPath === '') {
+             setPage('home');
+        } else {
+             // Fallback to home for unknown routes
+             setPage('home');
+        }
         setSelectedProductId(null);
         setSelectedCategory(null);
       }
-    };
+  };
 
-    window.addEventListener('hashchange', handleHashChange);
-    handleHashChange(); // Initial load
+  const navigate = (path: string) => {
+      window.history.pushState({}, '', path);
+      handleLocationChange();
+  };
+
+  React.useEffect(() => {
+    // Intercept all clicks to handle SPA routing
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a');
+      
+      // Ignore if inside a button (button logic overrides) or has specific targets
+      if (target.closest('button') && anchor) {
+        e.preventDefault();
+        return;
+      }
+      
+      if (anchor) {
+          const href = anchor.getAttribute('href');
+          const targetAttr = anchor.getAttribute('target');
+          
+          // Only intercept relative links or links starting with / that aren't external
+          if (href && (href.startsWith('/') || href.startsWith('.')) && !href.startsWith('http') && targetAttr !== '_blank') {
+              e.preventDefault();
+              navigate(href);
+          }
+      }
+    };
+    
+    document.addEventListener('click', handleLinkClick);
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // Initial routing check
+    handleLocationChange();
 
     return () => {
       document.removeEventListener('click', handleLinkClick);
-      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', handleLocationChange);
     };
   }, []);
   
@@ -1248,48 +1294,50 @@ const App: React.FC = () => {
   }, [compareList, products]);
 
 
-  // Breadcrumbs logic
+  // Breadcrumbs logic (Clean URLs)
   const breadcrumbs = React.useMemo<Breadcrumb[]>(() => {
-    const homeCrumb: Breadcrumb = { name: 'Home', href: '#/home', isCurrent: false };
-    const shopCrumb: Breadcrumb = { name: 'Shop', href: '#/shop', isCurrent: false };
+    const homeCrumb: Breadcrumb = { name: 'Home', href: '/home', isCurrent: false };
+    const shopCrumb: Breadcrumb = { name: 'Shop', href: '/shop', isCurrent: false };
     
     switch(page) {
       case 'shop':
         if (selectedCategory) {
-            return [homeCrumb, shopCrumb, { name: selectedCategory, href: `#/shop/${selectedCategory}`, isCurrent: true }];
+            return [homeCrumb, shopCrumb, { name: selectedCategory, href: `/shop/${selectedCategory}`, isCurrent: true }];
         }
         return [homeCrumb, { ...shopCrumb, isCurrent: true }];
       case 'product':
-        const categoryCrumb = selectedProduct ? { name: selectedProduct.category, href: `#/shop/${selectedProduct.category}`, isCurrent: false } : shopCrumb;
-        return selectedProduct ? [homeCrumb, categoryCrumb, { name: selectedProduct.name, href: `#/product/${selectedProduct.id}`, isCurrent: true }] : [homeCrumb, { ...shopCrumb, isCurrent: true }];
+        // Generate slug for breadcrumb
+        const productSlug = selectedProduct ? createSlug(selectedProduct.name, selectedProduct.id) : '';
+        const categoryCrumb = selectedProduct ? { name: selectedProduct.category, href: `/shop/${selectedProduct.category}`, isCurrent: false } : shopCrumb;
+        return selectedProduct ? [homeCrumb, categoryCrumb, { name: selectedProduct.name, href: `/product/${productSlug}`, isCurrent: true }] : [homeCrumb, { ...shopCrumb, isCurrent: true }];
       case 'cart':
-        return [homeCrumb, { name: 'Your Cart', href: '#/cart', isCurrent: true }];
+        return [homeCrumb, { name: 'Your Cart', href: '/cart', isCurrent: true }];
       case 'wishlist':
-        return [homeCrumb, { name: 'Wishlist', href: '#/wishlist', isCurrent: true }];
+        return [homeCrumb, { name: 'Wishlist', href: '/wishlist', isCurrent: true }];
       case 'account':
-        return [homeCrumb, { name: 'My Account', href: '#/account', isCurrent: true }];
+        return [homeCrumb, { name: 'My Account', href: '/account', isCurrent: true }];
       case 'repair':
-        return [homeCrumb, { name: 'Repair Services', href: '#/repair', isCurrent: true }];
+        return [homeCrumb, { name: 'Repair Services', href: '/repair', isCurrent: true }];
       case 'terms':
-        return [homeCrumb, { name: 'Terms and Conditions', href: '#/terms', isCurrent: true }];
+        return [homeCrumb, { name: 'Terms and Conditions', href: '/terms', isCurrent: true }];
       case 'privacy':
-        return [homeCrumb, { name: 'Privacy Policy', href: '#/privacy', isCurrent: true }];
+        return [homeCrumb, { name: 'Privacy Policy', href: '/privacy', isCurrent: true }];
       case 'returns':
-        return [homeCrumb, { name: 'Returns and Refunds', href: '#/returns', isCurrent: true }];
+        return [homeCrumb, { name: 'Returns and Refunds', href: '/returns', isCurrent: true }];
       case 'blog':
-        return [homeCrumb, { name: 'Blog', href: '#/blog', isCurrent: true }];
+        return [homeCrumb, { name: 'Blog', href: '/blog', isCurrent: true }];
       case 'find-store':
-        return [homeCrumb, { name: 'Find A Store', href: '#/find-store', isCurrent: true }];
+        return [homeCrumb, { name: 'Find A Store', href: '/find-store', isCurrent: true }];
       case 'coupons':
-        return [homeCrumb, { name: 'Coupons', href: '#/coupons', isCurrent: true }];
+        return [homeCrumb, { name: 'Coupons', href: '/coupons', isCurrent: true }];
       case 'admin':
-        return [homeCrumb, { name: 'Admin Panel', href: '#/admin', isCurrent: true }];
+        return [homeCrumb, { name: 'Admin Panel', href: '/admin', isCurrent: true }];
       case 'seller':
-        return [homeCrumb, { name: 'Seller Panel', href: '#/seller', isCurrent: true }];
+        return [homeCrumb, { name: 'Seller Panel', href: '/seller', isCurrent: true }];
       case 'why-dev-mobile':
-        return [homeCrumb, { name: 'Why Dev Mobile', href: '#/why-dev-mobile', isCurrent: true }];
+        return [homeCrumb, { name: 'Why Dev Mobile', href: '/why-dev-mobile', isCurrent: true }];
       case 'track-order':
-        return [homeCrumb, { name: 'Track Your Order', href: '#/track-order', isCurrent: true }];
+        return [homeCrumb, { name: 'Track Your Order', href: '/track-order', isCurrent: true }];
       default:
         return [{...homeCrumb, isCurrent: true}];
     }
@@ -1298,7 +1346,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (appState === 'confirmed') {
       if (page === 'payment-success' && orderInfo) {
-        return <OrderConfirmation order={orderInfo} currentUser={currentUser} onReturnToShop={() => { setAppState('browsing'); setPage('shop'); }} />;
+        return <OrderConfirmation order={orderInfo} currentUser={currentUser} onReturnToShop={() => { setAppState('browsing'); navigate('/shop'); }} />;
       }
     }
       
@@ -1308,7 +1356,7 @@ const App: React.FC = () => {
                 subtotal={cartSubtotal}
                 shippingCost={shippingCost}
                 onPlaceOrder={handlePlaceOrder}
-                onCancel={() => setAppState('browsing')}
+                onCancel={() => { setAppState('browsing'); navigate('/cart'); }}
                 addToast={addToast}
                 userPinCode={userPinCode}
                 onPinCodeChange={handleSetPinCode}
@@ -1316,7 +1364,7 @@ const App: React.FC = () => {
                 currentUser={currentUser}
                 coupons={coupons}
                 userLocation={userLocation}
-                onUpdateUser={handleUpdateUser} // Added prop to fix TS error
+                onUpdateUser={handleUpdateUser} 
              />;
     }
 
@@ -1345,7 +1393,7 @@ const App: React.FC = () => {
           return selectedProduct ? <ProductDetail product={selectedProduct} onAddToCart={handleAddToCart} relatedProducts={products.slice(0, 4)} onToggleLike={handleToggleLike} likedItems={likedItems} currentUser={currentUser} onAddReview={handleAddReview} addToast={addToast} userPinCode={userPinCode} onPinCodeChange={handleSetPinCode} onNotifyMe={handleNotifyMe} notificationList={notificationList} onWatchPrice={handleWatchPrice} priceWatchList={priceWatchList} compareList={compareList} onToggleCompare={handleToggleCompare} /> : <div>Product not found</div>;
         case 'cart':
             return cartItems.length > 0 ? (
-                <Cart cartItems={cartItems} onRemoveFromCart={handleRemoveFromCart} onUpdateQuantity={handleUpdateQuantity} onCheckout={() => setAppState('checkout')} subtotal={cartSubtotal} shipping={shippingCost} total={cartTotal} userPinCode={userPinCode} />
+                <Cart cartItems={cartItems} onRemoveFromCart={handleRemoveFromCart} onUpdateQuantity={handleUpdateQuantity} onCheckout={() => { setAppState('checkout'); navigate('/cart'); }} subtotal={cartSubtotal} shipping={shippingCost} total={cartTotal} userPinCode={userPinCode} />
             ) : (
                  <div className="text-center bg-white p-12 rounded-lg shadow-md border border-gray-200">
                     <ShoppingCartIcon className="w-16 h-16 mx-auto text-gray-300 mb-4" />
@@ -1442,11 +1490,9 @@ const App: React.FC = () => {
       }
     };
     
-    // FIX: Added a return statement to call `renderPage()`. The function had a path where it would define `renderPage` but not return its result, causing the component to return `undefined` and crash.
     return renderPage();
   };
 
-  // Handle full-page routes that don't need the main layout
   if (page === 'invoice') {
     return <Suspense fallback={<FullPageSpinner />}><InvoicePage /></Suspense>;
   }
@@ -1496,6 +1542,16 @@ const App: React.FC = () => {
       {isPinCodeModalOpen && (
           <Suspense fallback={null}>
             <PinCodeModal onClose={() => setPinCodeModalOpen(false)} onSetPinCode={handleSetPinCode} />
+          </Suspense>
+      )}
+      {/* Mobile Prompt Modal */}
+      {isMobilePromptOpen && (
+          <Suspense fallback={null}>
+              <MobileNumberPrompt 
+                  isOpen={isMobilePromptOpen} 
+                  onClose={() => setMobilePromptOpen(false)} 
+                  onSubmit={handleMobileSubmit} 
+              />
           </Suspense>
       )}
       {flyingImage && (

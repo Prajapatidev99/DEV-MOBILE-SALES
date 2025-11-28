@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import type { Product, ProductVariant } from '../types';
 import ProductList from './ProductList';
@@ -38,7 +39,7 @@ const WishlistPage: React.FC<WishlistPageProps> = ({ products, likedItems, onTog
             <h2 className="text-2xl font-bold mb-2">Your Wishlist is Empty</h2>
             <p className="text-gray-600 mb-6">Looks like you haven't liked any products yet. Start exploring to find something you love!</p>
             <a
-              href="#/shop"
+              href="/shop"
               className="inline-block bg-yellow-400 text-black font-bold py-3 px-8 rounded-md hover:bg-yellow-500 transition-transform transform hover:scale-105 duration-300"
             >
               Make Yours

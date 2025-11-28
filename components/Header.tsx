@@ -1,3 +1,4 @@
+
 // FIX: Changed React import to `import React from 'react'` to ensure the JSX namespace is correctly picked up, resolving errors with unrecognized HTML elements.
 import React from 'react';
 import type { User, Product, Notification, ProductCategory } from '../types';
@@ -5,6 +6,7 @@ import { HeartIcon, ShoppingCartIcon } from './icons';
 import SearchBar from './SearchBar';
 import NotificationsPanel from './NotificationsPanel';
 import AnimatedAuthButton from './AnimatedAuthButton';
+import { createSlug } from '../utils';
 
 interface HeaderProps {
   cartCount: number;
@@ -27,14 +29,14 @@ interface HeaderProps {
 }
 
 const categoryLinks = [
-    { name: "Smartphones", href: "#/shop/Smartphones"},
-    { name: "Smartwatches", href: "#/shop/Smartwatches"},
-    { name: "Refurbished Phones", href: "#/shop/Refurbished Phones"},
+    { name: "Smartphones", href: "/shop/Smartphones"},
+    { name: "Smartwatches", href: "/shop/Smartwatches"},
+    { name: "Refurbished Phones", href: "/shop/Refurbished Phones"},
     { 
         name: "Accessories", 
-        href: "#/shop/Accessories",
+        href: "/shop/Accessories",
     },
-    { name: "Repair", href: "#/repair"},
+    { name: "Repair", href: "/repair"},
 ];
 
 
@@ -145,12 +147,12 @@ const MobileMenu: React.FC<{
                     <div className="mt-auto space-y-4">
                         {currentUser ? (
                             <>
-                                <a href="#/account" onClick={onClose} className="block text-lg font-semibold text-gray-700 hover:text-blue-600">My Account</a>
+                                <a href="/account" onClick={onClose} className="block text-lg font-semibold text-gray-700 hover:text-blue-600">My Account</a>
                                 {currentUser.role === 'admin' && (
-                                    <a href="#/admin" onClick={onClose} className="block text-lg font-semibold text-gray-700 hover:text-blue-600">Admin Panel</a>
+                                    <a href="/admin" onClick={onClose} className="block text-lg font-semibold text-gray-700 hover:text-blue-600">Admin Panel</a>
                                 )}
                                 {currentUser.role === 'seller' && (
-                                    <a href="#/seller" onClick={onClose} className="block text-lg font-semibold text-gray-700 hover:text-blue-600">Seller Panel</a>
+                                    <a href="/seller" onClick={onClose} className="block text-lg font-semibold text-gray-700 hover:text-blue-600">Seller Panel</a>
                                 )}
                                 <div className="pt-2">
                                   <AnimatedAuthButton type="logout" label="Logout" onClick={() => { onLogout(); onClose(); }} isLight={true} />
@@ -209,6 +211,19 @@ const Header: React.FC<HeaderProps> = ({
   
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
+  // Handle navigating to search results or products directly
+  const handleSearchSubmitWrapper = (query: string) => {
+      // Check if it matches a product name exactly to navigate to it
+      const match = allProducts.find(p => p.name.toLowerCase() === query.toLowerCase());
+      if (match) {
+          const slug = createSlug(match.name, match.id);
+          window.history.pushState({}, '', `/product/${slug}`);
+          window.dispatchEvent(new Event('popstate'));
+      } else {
+          onSearchSubmit(query);
+      }
+  };
+
   return (
     <>
       <header className="sticky top-0 bg-white shadow-sm z-20">
@@ -224,7 +239,7 @@ const Header: React.FC<HeaderProps> = ({
                         </div>
                     </button>
                     <div className="flex-shrink-0">
-                      <a href="#/home" className="group text-2xl sm:text-3xl font-bold text-white tracking-tighter">
+                      <a href="/home" className="group text-2xl sm:text-3xl font-bold text-white tracking-tighter">
                         <span className="transition-colors group-hover:text-yellow-300">Dev</span>
                         <span> Mobile</span>
                       </a>
@@ -241,7 +256,7 @@ const Header: React.FC<HeaderProps> = ({
                           id="search-input-desktop"
                           searchQuery={searchQuery}
                           onSearchChange={onSearchChange}
-                          onSearchSubmit={onSearchSubmit}
+                          onSearchSubmit={handleSearchSubmitWrapper}
                           recentSearches={recentSearches}
                           allProducts={allProducts}
                       />
@@ -266,7 +281,7 @@ const Header: React.FC<HeaderProps> = ({
                       />
                     )}
                    </div>
-                  <a href="#/wishlist" className="relative text-white rounded-full hover:bg-gray-700 transition-all duration-300 transform hover:scale-110 w-9 h-9 flex items-center justify-center">
+                  <a href="/wishlist" className="relative text-white rounded-full hover:bg-gray-700 transition-all duration-300 transform hover:scale-110 w-9 h-9 flex items-center justify-center">
                     <HeartIcon className={`w-6 h-6 ${animateLikedIcon ? 'animate-jiggle' : ''}`} />
                     {likedCount > 0 && (
                       <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
@@ -274,7 +289,7 @@ const Header: React.FC<HeaderProps> = ({
                       </span>
                     )}
                   </a>
-                  <a href="#/cart" className="relative text-white rounded-full hover:bg-gray-700 transition-all duration-300 transform hover:scale-110 w-9 h-9 flex items-center justify-center">
+                  <a href="/cart" className="relative text-white rounded-full hover:bg-gray-700 transition-all duration-300 transform hover:scale-110 w-9 h-9 flex items-center justify-center">
                     <ShoppingCartIcon className={`w-6 h-6 ${animateCartIcon ? 'animate-jiggle' : ''}`} />
                     {cartCount > 0 && (
                       <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
@@ -294,12 +309,12 @@ const Header: React.FC<HeaderProps> = ({
                           {isDropdownOpen && (
                               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-30 ring-1 ring-black ring-opacity-5 divide-y">
                                   <div className="py-1">
-                                    <a href="#/account" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Account</a>
+                                    <a href="/account" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Account</a>
                                     {currentUser.role === 'admin' && (
-                                        <a href="#/admin" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Admin Panel</a>
+                                        <a href="/admin" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Admin Panel</a>
                                     )}
                                     {currentUser.role === 'seller' && (
-                                        <a href="#/seller" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Seller Panel</a>
+                                        <a href="/seller" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Seller Panel</a>
                                     )}
                                   </div>
                                   <div className="flex justify-center p-2">
@@ -322,7 +337,7 @@ const Header: React.FC<HeaderProps> = ({
                   id="search-input-mobile"
                   searchQuery={searchQuery}
                   onSearchChange={onSearchChange}
-                  onSearchSubmit={onSearchSubmit}
+                  onSearchSubmit={handleSearchSubmitWrapper}
                   recentSearches={recentSearches}
                   allProducts={allProducts}
               />

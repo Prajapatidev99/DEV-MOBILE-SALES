@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import type { Product, HomepageConfig, Coupon, Order, User, Store, Payout, FocalPoint, HeroBannerConfig, PromoBannerConfig, ProductVariant, CartItem } from '../types';
 import ProductEditorModal from './ProductEditorModal';
@@ -116,7 +117,7 @@ const HomepageEditor: React.FC<HomepageEditorProps> = ({ config, onSave, addToas
                     title: 'New Promo Banner',
                     subtitle: 'Edit this subtitle',
                     imagePublicId: 'https://res.cloudinary.com/dv9z9uaht/image/upload/v1721242380/dev-mobile/placeholder_vpo23u.jpg',
-                    link: '#/shop',
+                    link: '/shop', // Changed default to clean URL
                 }
             ]
         }));
@@ -193,7 +194,7 @@ const HomepageEditor: React.FC<HomepageEditorProps> = ({ config, onSave, addToas
                                     <label className={labelClasses}>Image Public ID</label>
                                     <input type="text" placeholder="dev-mobile/promo-image" value={promo.imagePublicId} onChange={e => handlePromoChange(index, 'imagePublicId', e.target.value)} className={inputClasses} />
                                 </div>
-                                <div><label className={labelClasses}>Link (e.g., #/shop/Smartphones)</label><input value={promo.link} onChange={e => handlePromoChange(index, 'link', e.target.value)} className={inputClasses} /></div>
+                                <div><label className={labelClasses}>Link (e.g., /shop/Smartphones)</label><input value={promo.link} onChange={e => handlePromoChange(index, 'link', e.target.value)} className={inputClasses} /></div>
                             </div>
                             <button onClick={() => { setImagePreviewUrl(getCloudinaryUrl(promo.imagePublicId, 600)); setFocalPointTarget({ type: 'promo', index }); }} className="text-sm text-blue-600 hover:underline mt-2">Set Image Focal Point</button>
                         </div>

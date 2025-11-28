@@ -35,11 +35,12 @@ const InvoicePage: React.FC = () => {
                 <div className="flex justify-between items-start mb-8 border-b pb-4">
                     <div>
                         <h1 className="text-4xl font-bold text-gray-800">Dev Mobile</h1>
-                        <p className="text-gray-500"></p>
+                        <p className="text-gray-500 max-w-xs">Shreeji enclave complex, L-15, Ramdevnagar Rd, satellite, Ahmedabad, Gujarat 380015</p>
                     </div>
                     <div className="text-right">
                         <h2 className="text-2xl font-semibold uppercase text-gray-500">Invoice</h2>
                         <p><strong>Order ID:</strong> {order.id}</p>
+                        {order.paymentId && <p><strong>Transaction ID (UTR):</strong> {order.paymentId}</p>}
                         <p><strong>Date:</strong> {new Date(order.date).toLocaleDateString()}</p>
                     </div>
                 </div>
@@ -95,7 +96,7 @@ const InvoicePage: React.FC = () => {
                             </div>
                         )}
                         <div className="flex justify-between font-bold text-xl border-t pt-2 mt-2">
-                            <span>Total :</span>
+                            <span>Total (incl. tax):</span>
                             <span>₹{order.total.toLocaleString('en-IN')}</span>
                         </div>
                     </div>
@@ -103,7 +104,7 @@ const InvoicePage: React.FC = () => {
 
                 <div className="text-center mt-12 text-sm text-gray-500 border-t pt-4">
                     <p>Thank you for your business!</p>
-                    <p>If you have any questions, please contact 9974221322.</p>
+                    <p>If you have any questions, please contact support at support@devmobile.com.</p>
                 </div>
 
                 <div className="text-center mt-4 no-print">
