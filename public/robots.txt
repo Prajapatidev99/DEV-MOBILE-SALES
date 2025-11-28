@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Point directly to the backend sitemap to ensure crawlers can read it
+Sitemap: https://dev-mobile-sales.onrender.com/sitemap.xml
