@@ -45,12 +45,17 @@ services:
           name: devmobile-backend
           property: url
     routes:
-      # Redirect sitemap.xml to the backend service
-      # This MUST come before the catch-all rewrite to work
+      # 1. Redirect sitemap.xml to the backend
       - type: redirect
         source: /sitemap.xml
         destination: https://dev-mobile-sales.onrender.com/sitemap.xml
-      # SPA Fallback for all other routes
+      
+      # 2. Explicitly serve robots.txt (Prevents loading index.html)
+      - type: rewrite
+        source: /robots.txt
+        destination: /robots.txt
+
+      # 3. SPA Fallback for all other routes
       - type: rewrite
         source: "/*"
         destination: /index.html
