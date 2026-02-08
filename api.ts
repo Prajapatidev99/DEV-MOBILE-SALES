@@ -1,22 +1,22 @@
 // FIX: Updated imports to use lazy getters from './firebase' instead of static instances.
 // This works in tandem with the changes in firebase.ts to delay initialization.
-import { 
-    collection, 
-    doc, 
-    getDoc, 
-    getDocs, 
-    setDoc, 
-    addDoc, 
-    updateDoc, 
-    deleteDoc, 
-    query, 
-    where, 
-    limit, 
-    orderBy, 
+import {
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    setDoc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    query,
+    where,
+    limit,
+    orderBy,
     writeBatch
 } from 'firebase/firestore';
 // FIX: Use named imports for firebase/auth to avoid namespace import issues and improve tree-shaking
-import { 
+import {
     getAuth,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -36,7 +36,6 @@ import type { Product, User, CartItem, Order, Review, Store, ProductVariant, Hom
 // USE ENVIRONMENT VARIABLES FOR DEPLOYMENT
 // FIX: Cast import.meta to any to resolve TypeScript error 'Property env does not exist on type ImportMeta'.
 export const API_BASE_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:3001';
-const BACKEND_API_SECRET = (import.meta as any).env.VITE_BACKEND_API_SECRET || 'dev-secret';
 
 // DEBUG: Check API URL in production
 console.log('🔌 Connected to API:', API_BASE_URL);
@@ -67,7 +66,7 @@ const cleanData = (data: any): any => {
 // due to security rules preventing users from querying the user collection.
 const _getUidFromNumericId = async (userId: number): Promise<string | null> => {
     const auth = getFirebaseAuth();
-    
+
     // Quick check
     if (auth.currentUser) {
         return auth.currentUser.uid;
@@ -85,6 +84,21 @@ const _getUidFromNumericId = async (userId: number): Promise<string | null> => {
     // If still no user, we cannot proceed securely.
     // Returning null will trigger the "Please log in" flow.
     return null;
+};
+
+// --- HELPER: Get Firebase ID Token for authenticated requests ---
+const getAuthToken = async (): Promise<string | null> => {
+    const auth = getFirebaseAuth();
+    if (!auth.currentUser) {
+        console.warn('No authenticated user found');
+        return null;
+    }
+    try {
+        return await auth.currentUser.getIdToken();
+    } catch (error) {
+        console.error('Failed to get Firebase ID token:', error);
+        return null;
+    }
 };
 
 
@@ -109,34 +123,42 @@ const BANNER_IMAGE_IDS = {
 
 // --- SAMPLE DATA (for seeding) ---
 const sampleProducts: Omit<Product, 'id'>[] = [
-    { name: 'Apple iPhone 15', category: 'Smartphones', imagePublicIds: [PRODUCT_IMAGE_IDS['Apple iPhone 15']], rating: 4.8, description: 'The latest iPhone with a stunning new camera and the powerful A16 Bionic chip.', brand: 'Apple', specifications: { display: '6.1" Super Retina XDR', camera: '48MP Main', processor: 'A16 Bionic', battery: '3349mAh' }, reviews: [], dateAdded: '2023-10-01', approvalStatus: 'approved',
-        variants: [ { id: '1-pink-128', sellerPrice: 58900, price: 59900, originalPrice: 65900, attributes: { Color: 'Pink', Storage: '128GB', RAM: '6GB' }, colorCode: '#F5C6D0', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Apple iPhone 15'] } ]
+    {
+        name: 'Apple iPhone 15', category: 'Smartphones', imagePublicIds: [PRODUCT_IMAGE_IDS['Apple iPhone 15']], rating: 4.8, description: 'The latest iPhone with a stunning new camera and the powerful A16 Bionic chip.', brand: 'Apple', specifications: { display: '6.1" Super Retina XDR', camera: '48MP Main', processor: 'A16 Bionic', battery: '3349mAh' }, reviews: [], dateAdded: '2023-10-01', approvalStatus: 'approved',
+        variants: [{ id: '1-pink-128', sellerPrice: 58900, price: 59900, originalPrice: 65900, attributes: { Color: 'Pink', Storage: '128GB', RAM: '6GB' }, colorCode: '#F5C6D0', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Apple iPhone 15'] }]
     },
-    { name: 'Samsung Galaxy S24 Ultra', category: 'Smartphones', imagePublicIds: [PRODUCT_IMAGE_IDS['Samsung Galaxy S24 Ultra']], rating: 4.9, description: 'Experience the new era of mobile AI with Galaxy S24 Ultra.', brand: 'Samsung', specifications: { display: '6.8" Dynamic AMOLED 2X', camera: '200MP Wide', processor: 'Snapdragon 8 Gen 3', battery: '5000mAh' }, reviews: [], dateAdded: '2024-01-15', approvalStatus: 'approved',
-        variants: [ { id: '2-grey-256', sellerPrice: 128499, price: 129999, originalPrice: 134999, attributes: { Color: 'Titanium Gray', Storage: '256GB', RAM: '12GB' }, colorCode: '#848482', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Samsung Galaxy S24 Ultra'] } ]
+    {
+        name: 'Samsung Galaxy S24 Ultra', category: 'Smartphones', imagePublicIds: [PRODUCT_IMAGE_IDS['Samsung Galaxy S24 Ultra']], rating: 4.9, description: 'Experience the new era of mobile AI with Galaxy S24 Ultra.', brand: 'Samsung', specifications: { display: '6.8" Dynamic AMOLED 2X', camera: '200MP Wide', processor: 'Snapdragon 8 Gen 3', battery: '5000mAh' }, reviews: [], dateAdded: '2024-01-15', approvalStatus: 'approved',
+        variants: [{ id: '2-grey-256', sellerPrice: 128499, price: 129999, originalPrice: 134999, attributes: { Color: 'Titanium Gray', Storage: '256GB', RAM: '12GB' }, colorCode: '#848482', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Samsung Galaxy S24 Ultra'] }]
     },
-    { name: 'Google Pixel 8 Pro', category: 'Smartphones', imagePublicIds: [PRODUCT_IMAGE_IDS['Google Pixel 8 Pro']], rating: 4.7, description: 'The power of Google AI, in your hand.', brand: 'Google', specifications: { display: '6.7" Super Actua LTPO OLED', camera: '50MP Octa-PD', processor: 'Google Tensor G3', battery: '5050mAh' }, reviews: [], dateAdded: '2023-11-05', approvalStatus: 'approved',
-        variants: [ { id: '3-obsidian-128', sellerPrice: 88999, price: 89999, attributes: { Color: 'Obsidian', Storage: '128GB', RAM: '12GB' }, colorCode: '#1C1C1E', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Google Pixel 8 Pro'] } ]
+    {
+        name: 'Google Pixel 8 Pro', category: 'Smartphones', imagePublicIds: [PRODUCT_IMAGE_IDS['Google Pixel 8 Pro']], rating: 4.7, description: 'The power of Google AI, in your hand.', brand: 'Google', specifications: { display: '6.7" Super Actua LTPO OLED', camera: '50MP Octa-PD', processor: 'Google Tensor G3', battery: '5050mAh' }, reviews: [], dateAdded: '2023-11-05', approvalStatus: 'approved',
+        variants: [{ id: '3-obsidian-128', sellerPrice: 88999, price: 89999, attributes: { Color: 'Obsidian', Storage: '128GB', RAM: '12GB' }, colorCode: '#1C1C1E', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Google Pixel 8 Pro'] }]
     },
-    { name: 'Apple Watch Series 9', category: 'Smartwatches', imagePublicIds: [PRODUCT_IMAGE_IDS['Apple Watch Series 9']], rating: 4.9, description: 'Smarter, brighter, and mightier.', brand: 'Apple', specifications: { display: 'Always-On Retina LTPO OLED', camera: 'N/A', processor: 'S9 SiP', battery: 'Up to 18 hours' }, reviews: [], dateAdded: '2023-09-15', approvalStatus: 'approved',
-        variants: [ { id: '4-midnight-45', sellerPrice: 44000, price: 44900, attributes: { Color: 'Midnight', Storage: '45mm' }, colorCode: '#1f2937', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Apple Watch Series 9'] } ]
+    {
+        name: 'Apple Watch Series 9', category: 'Smartwatches', imagePublicIds: [PRODUCT_IMAGE_IDS['Apple Watch Series 9']], rating: 4.9, description: 'Smarter, brighter, and mightier.', brand: 'Apple', specifications: { display: 'Always-On Retina LTPO OLED', camera: 'N/A', processor: 'S9 SiP', battery: 'Up to 18 hours' }, reviews: [], dateAdded: '2023-09-15', approvalStatus: 'approved',
+        variants: [{ id: '4-midnight-45', sellerPrice: 44000, price: 44900, attributes: { Color: 'Midnight', Storage: '45mm' }, colorCode: '#1f2937', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Apple Watch Series 9'] }]
     },
-    { name: 'OnePlus 12', category: 'Smartphones', imagePublicIds: [PRODUCT_IMAGE_IDS['OnePlus 12']], rating: 4.7, description: 'Elite performance and an effortlessly smooth experience.', brand: 'OnePlus', specifications: { display: '6.82" 2K ProXDR Display', camera: '50MP Sony LYT-808', processor: 'Snapdragon 8 Gen 3', battery: '5400mAh' }, reviews: [], dateAdded: '2024-02-01', approvalStatus: 'approved',
-        variants: [ { id: '5-green-256', sellerPrice: 64499, price: 64999, attributes: { Color: 'Flowy Emerald', Storage: '256GB', RAM: '12GB' }, colorCode: '#90EE90', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['OnePlus 12'] } ]
+    {
+        name: 'OnePlus 12', category: 'Smartphones', imagePublicIds: [PRODUCT_IMAGE_IDS['OnePlus 12']], rating: 4.7, description: 'Elite performance and an effortlessly smooth experience.', brand: 'OnePlus', specifications: { display: '6.82" 2K ProXDR Display', camera: '50MP Sony LYT-808', processor: 'Snapdragon 8 Gen 3', battery: '5400mAh' }, reviews: [], dateAdded: '2024-02-01', approvalStatus: 'approved',
+        variants: [{ id: '5-green-256', sellerPrice: 64499, price: 64999, attributes: { Color: 'Flowy Emerald', Storage: '256GB', RAM: '12GB' }, colorCode: '#90EE90', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['OnePlus 12'] }]
     },
-    { name: 'Apple AirPods Pro (2nd Gen)', category: 'Accessories', imagePublicIds: [PRODUCT_IMAGE_IDS['Apple AirPods Pro (2nd Gen)']], rating: 4.8, description: 'Richer audio quality, next-level Active Noise Cancellation.', brand: 'Apple', specifications: { display: 'N/A', camera: 'N/A', processor: 'H2 Chip', battery: 'Up to 6 hours' }, reviews: [], dateAdded: '2023-09-20', approvalStatus: 'approved',
-        variants: [ { id: '6-white-usbc', sellerPrice: 24000, price: 24900, attributes: { Color: 'White', Storage: 'USB-C' }, colorCode: '#ffffff', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Apple AirPods Pro (2nd Gen)'] } ]
+    {
+        name: 'Apple AirPods Pro (2nd Gen)', category: 'Accessories', imagePublicIds: [PRODUCT_IMAGE_IDS['Apple AirPods Pro (2nd Gen)']], rating: 4.8, description: 'Richer audio quality, next-level Active Noise Cancellation.', brand: 'Apple', specifications: { display: 'N/A', camera: 'N/A', processor: 'H2 Chip', battery: 'Up to 6 hours' }, reviews: [], dateAdded: '2023-09-20', approvalStatus: 'approved',
+        variants: [{ id: '6-white-usbc', sellerPrice: 24000, price: 24900, attributes: { Color: 'White', Storage: 'USB-C' }, colorCode: '#ffffff', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Apple AirPods Pro (2nd Gen)'] }]
     },
-    { name: 'Samsung Galaxy Watch 6', category: 'Smartwatches', imagePublicIds: [PRODUCT_IMAGE_IDS['Samsung Galaxy Watch 6']], rating: 4.6, description: 'The smart watch that knows you best.', brand: 'Samsung', specifications: { display: '1.5" Super AMOLED', camera: 'N/A', processor: 'Exynos W930', battery: 'Up to 40 hours' }, reviews: [], dateAdded: '2023-08-10', approvalStatus: 'approved',
-        variants: [ { id: '7-graphite-44', sellerPrice: 33500, price: 33999, attributes: { Color: 'Graphite', Storage: '44mm' }, colorCode: '#2d2d2d', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Samsung Galaxy Watch 6'] } ]
+    {
+        name: 'Samsung Galaxy Watch 6', category: 'Smartwatches', imagePublicIds: [PRODUCT_IMAGE_IDS['Samsung Galaxy Watch 6']], rating: 4.6, description: 'The smart watch that knows you best.', brand: 'Samsung', specifications: { display: '1.5" Super AMOLED', camera: 'N/A', processor: 'Exynos W930', battery: 'Up to 40 hours' }, reviews: [], dateAdded: '2023-08-10', approvalStatus: 'approved',
+        variants: [{ id: '7-graphite-44', sellerPrice: 33500, price: 33999, attributes: { Color: 'Graphite', Storage: '44mm' }, colorCode: '#2d2d2d', inventory: [{ storeId: 1, quantity: 10 }], imagePublicId: PRODUCT_IMAGE_IDS['Samsung Galaxy Watch 6'] }]
     },
-    { name: 'Xiaomi 14', category: 'Smartphones', imagePublicIds: [PRODUCT_IMAGE_IDS['Xiaomi 14']], rating: 4.5, description: 'Next-generation Leica optics.', brand: 'Xiaomi', specifications: { display: '6.36" CrystalRes AMOLED', camera: '50MP Light Fusion 900', processor: 'Snapdragon 8 Gen 3', battery: '4610mAh' }, reviews: [], dateAdded: '2024-03-01', sellerId: 2, approvalStatus: 'pending',
-        variants: [ { id: '8-white-256', sellerPrice: 69500, price: 69999, attributes: { Color: 'White', Storage: '256GB', RAM: '12GB' }, colorCode: '#E0E0E0', inventory: [{ storeId: 2, quantity: 5 }], imagePublicId: PRODUCT_IMAGE_IDS['Xiaomi 14'] } ]
+    {
+        name: 'Xiaomi 14', category: 'Smartphones', imagePublicIds: [PRODUCT_IMAGE_IDS['Xiaomi 14']], rating: 4.5, description: 'Next-generation Leica optics.', brand: 'Xiaomi', specifications: { display: '6.36" CrystalRes AMOLED', camera: '50MP Light Fusion 900', processor: 'Snapdragon 8 Gen 3', battery: '4610mAh' }, reviews: [], dateAdded: '2024-03-01', sellerId: 2, approvalStatus: 'pending',
+        variants: [{ id: '8-white-256', sellerPrice: 69500, price: 69999, attributes: { Color: 'White', Storage: '256GB', RAM: '12GB' }, colorCode: '#E0E0E0', inventory: [{ storeId: 2, quantity: 5 }], imagePublicId: PRODUCT_IMAGE_IDS['Xiaomi 14'] }]
     },
     {
         name: 'Refurbished Apple iPhone 13',
         category: 'Refurbished Phones',
-        imagePublicIds: [PRODUCT_IMAGE_IDS['Apple iPhone 15']], 
+        imagePublicIds: [PRODUCT_IMAGE_IDS['Apple iPhone 15']],
         rating: 4.7,
         description: 'Excellent condition refurbished iPhone 13. Comes with a one-year warranty and a brand new battery. Fully tested and certified.',
         brand: 'Apple',
@@ -212,7 +234,7 @@ export const seedDatabase = async () => {
     batch.set(homepageConfigRef, sampleHomepageConfig);
 
     batch.set(seedFlagRef, { seeded: true, date: new Date().toISOString() });
-    
+
     await batch.commit();
     console.log("Database seeded successfully.");
 };
@@ -307,13 +329,12 @@ export const signup = async (name: string, email: string, pass: string, mobile: 
     if (!userCredential.user) throw new Error("Could not create user.");
     await updateProfile(userCredential.user, { displayName: name });
 
-    const newUser: User = { 
+    const newUser: User = {
         id: Date.now(),
-        name, 
+        name,
         email,
-        password: '',
-        mobile, 
-        marketingConsent, 
+        mobile,
+        marketingConsent,
         role: 'customer'
     };
     await setDoc(doc(getFirebaseDb(), COLLECTIONS.USERS, userCredential.user.uid), cleanData(newUser));
@@ -345,7 +366,6 @@ export const signInWithProvider = async (providerName: 'google' | 'facebook'): P
                 id: Date.now(),
                 name: firebaseUser.displayName || 'New User',
                 email: firebaseUser.email || '',
-                password: '',
                 role: 'customer',
                 mobile: firebaseUser.phoneNumber || '',
                 addresses: [],
@@ -373,13 +393,13 @@ export const getCart = async (userId: number): Promise<CartItem[]> => {
     // FIX: Prefer using the authenticated user's UID to avoid "Permission Denied" errors from Firestore rules
     const auth = getFirebaseAuth();
     let uid = auth.currentUser?.uid;
-    
+
     if (!uid) {
         uid = await _getUidFromNumericId(userId);
     }
-    
+
     if (!uid) return [];
-    
+
     try {
         const docSnap = await getDoc(doc(getFirebaseDb(), COLLECTIONS.CARTS, uid));
         return docSnap.exists() ? (docSnap.data() as any).items : [];
@@ -393,11 +413,11 @@ export const addToCart = async (userId: number, product: Product, variant: Produ
     try {
         const auth = getFirebaseAuth();
         let uid = auth.currentUser?.uid;
-        
+
         // Retry logic for auth state if it's racing with the component call
         if (!uid) {
-             await new Promise(resolve => setTimeout(resolve, 500));
-             uid = auth.currentUser?.uid;
+            await new Promise(resolve => setTimeout(resolve, 500));
+            uid = auth.currentUser?.uid;
         }
 
         if (!uid) {
@@ -406,7 +426,7 @@ export const addToCart = async (userId: number, product: Product, variant: Produ
         }
 
         if (!uid) throw new Error("User not found or session expired. Please log in again.");
-        
+
         const docRef = doc(getFirebaseDb(), COLLECTIONS.CARTS, uid);
         const docSnap = await getDoc(docRef);
         const userCart = docSnap.exists() ? ((docSnap.data() as any).items as CartItem[]) : [];
@@ -428,7 +448,7 @@ export const addToCart = async (userId: number, product: Product, variant: Produ
 export const removeFromCart = async (userId: number, variantId: string): Promise<CartItem[]> => {
     const auth = getFirebaseAuth();
     let uid = auth.currentUser?.uid;
-    
+
     if (!uid) {
         uid = await _getUidFromNumericId(userId);
     }
@@ -447,7 +467,7 @@ export const removeFromCart = async (userId: number, variantId: string): Promise
 export const updateCartQuantity = async (userId: number, variantId: string, quantity: number): Promise<CartItem[]> => {
     const auth = getFirebaseAuth();
     let uid = auth.currentUser?.uid;
-    
+
     if (!uid) {
         uid = await _getUidFromNumericId(userId);
     }
@@ -469,7 +489,7 @@ export const updateCartQuantity = async (userId: number, variantId: string, quan
 export const clearCart = async (userId: number): Promise<CartItem[]> => {
     const auth = getFirebaseAuth();
     let uid = auth.currentUser?.uid;
-    
+
     if (!uid) {
         uid = await _getUidFromNumericId(userId);
     }
@@ -482,7 +502,7 @@ export const clearCart = async (userId: number): Promise<CartItem[]> => {
 export const getWishlist = async (userId: number): Promise<number[]> => {
     const auth = getFirebaseAuth();
     let uid = auth.currentUser?.uid;
-    
+
     if (!uid) {
         uid = await _getUidFromNumericId(userId);
     }
@@ -501,18 +521,18 @@ export const toggleWishlist = async (userId: number, productId: number): Promise
     try {
         const auth = getFirebaseAuth();
         let uid = auth.currentUser?.uid;
-        
+
         if (!uid) {
-             await new Promise(resolve => setTimeout(resolve, 500));
-             uid = auth.currentUser?.uid;
+            await new Promise(resolve => setTimeout(resolve, 500));
+            uid = auth.currentUser?.uid;
         }
-        
+
         if (!uid) {
             uid = await _getUidFromNumericId(userId);
         }
 
         if (!uid) throw new Error("User not found or session expired.");
-        
+
         const docRef = doc(getFirebaseDb(), COLLECTIONS.WISHLISTS, uid);
         const docSnap = await getDoc(docRef);
         let userWishlist = docSnap.exists() ? ((docSnap.data() as any).productIds as number[]) : [];
@@ -565,7 +585,7 @@ export const addReview = async (productId: number, review: Review): Promise<Prod
     const docRef = doc(getFirebaseDb(), COLLECTIONS.PRODUCTS, productId.toString());
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) throw new Error("Product not found");
-    
+
     const product = docSnap.data() as Product;
     const updatedReviews = [review, ...product.reviews];
     await updateDoc(docRef, { reviews: cleanData(updatedReviews) });
@@ -609,7 +629,7 @@ export const requestReturn = async (orderId: string, variantId: string, reason: 
 
     order.items[itemIndex].returnRequest = { status: 'pending', reason, date: new Date().toISOString() };
     order.status = 'Return Requested';
-    
+
     await updateDoc(docRef, { items: cleanData(order.items), status: order.status });
     return order;
 };
@@ -652,16 +672,22 @@ export const getAllUsers = async (): Promise<User[]> => {
 
 export const sendTelegramAlert = async (order: Order, user: User | null) => {
     try {
+        const token = await getAuthToken();
+        if (!token) {
+            console.warn('User not authenticated, cannot send Telegram alert');
+            return;
+        }
+
         await fetch(`${API_BASE_URL}/api/send-telegram-alert`, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
-                'X-Secret-Key': BACKEND_API_SECRET
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({ order, user }),
         });
     } catch (error) {
-        console.warn("Could not connect to backend for Telegram alert.", error);
+        console.warn('Could not connect to backend for Telegram alert.', error);
     }
 };
 export const addPayout = async (storeId: number, payoutData: Omit<Payout, 'payoutId'>): Promise<Store> => {

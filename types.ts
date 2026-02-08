@@ -52,7 +52,7 @@ export interface ProductVariant {
 
 export interface Product {
   id: number;
-  name:string;
+  name: string;
   imagePublicIds: string[]; // General gallery images
   rating: number;
   description: string;
@@ -104,7 +104,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  password: string; // In a real app, this would be a hash
+  // Note: Passwords are managed by Firebase Authentication, never stored in Firestore
   role?: 'admin' | 'customer' | 'seller';
   mobile?: string;
   dob?: string;

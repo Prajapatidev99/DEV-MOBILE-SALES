@@ -4,6 +4,7 @@ const axios = require('axios');
 const cors = require('cors');
 const { GoogleGenAI } = require('@google/genai');
 const admin = require('firebase-admin');
+const { validateTelegramAlert, validateMobileNumber, validateGenerateContent } = require('./middleware/validation');
 require('dotenv').config();
 
 const app = express();
@@ -17,7 +18,7 @@ const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 let db;
 try {
     let serviceAccount;
-    
+
     // 1. Try to load from Secret File first (Render Secret File or local file)
     try {
         serviceAccount = require('./serviceAccount.json');
@@ -45,7 +46,7 @@ try {
     } else {
         // Only warn if not in test environment
         if (process.env.NODE_ENV !== 'test') {
-             console.warn("⚠️ WARNING: No serviceAccount.json file AND no FIREBASE_SERVICE_ACCOUNT_JSON env var found. Database features (Sitemap, etc.) will fail.");
+            console.warn("⚠️ WARNING: No serviceAccount.json file AND no FIREBASE_SERVICE_ACCOUNT_JSON env var found. Database features (Sitemap, etc.) will fail.");
         }
     }
 } catch (e) {
@@ -62,24 +63,25 @@ const allowedOrigins = [
 ].filter(Boolean); // Remove undefined values
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // Strictly allow any localhost origin for development (e.g., localhost:5173, localhost:3000)
-    if (origin.startsWith('http://localhost')) {
-        return callback(null, true);
-    }
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.warn(`⚠️ Blocked by CORS: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  optionsSuccessStatus: 200,
-  credentials: true
+        // Development: allow localhost origins
+        if (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost')) {
+            return callback(null, true);
+        }
+
+        // Production: strict whitelist only
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.warn(`⚠️ Blocked by CORS: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    optionsSuccessStatus: 200,
+    credentials: true
 };
 
 app.use(cors(corsOptions));
@@ -87,14 +89,38 @@ app.options('*', cors(corsOptions)); // Enable pre-flight request handling acros
 
 app.use(express.json()); // Parse JSON bodies
 
-// Middleware to secure the telegram endpoint
-const requireSecretKey = (req, res, next) => {
-    const secretKey = req.headers['x-secret-key'];
-    // In production, use a long, randomly generated secret for BACKEND_API_SECRET.
-    if (!secretKey || secretKey !== (process.env.BACKEND_API_SECRET || 'dev-secret')) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
+// Security headers middleware
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     next();
+});
+
+// Middleware to verify Firebase ID tokens
+const requireFirebaseAuth = async (req, res, next) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, message: 'Unauthorized: No token provided' });
+        }
+
+        const token = authHeader.split('Bearer ')[1];
+        const decodedToken = await admin.auth().verifyIdToken(token);
+
+        // Attach user info to request for use in route handlers
+        req.user = {
+            uid: decodedToken.uid,
+            email: decodedToken.email,
+            role: decodedToken.role || 'customer'
+        };
+
+        next();
+    } catch (error) {
+        console.error('Firebase token verification failed:', error.message);
+        return res.status(401).json({ success: false, message: 'Unauthorized: Invalid or expired token' });
+    }
 };
 
 // Helper: Create Slug
@@ -115,12 +141,12 @@ app.get('/', (req, res) => {
 app.get('/sitemap.xml', async (req, res) => {
     try {
         const baseUrl = process.env.FRONTEND_URL || 'https://www.devmobile.shop';
-        
+
         // 1. Define Static Routes
         // NOTE: These use Clean URLs (no # hash)
         const staticRoutes = [
-            'home', 'shop', 'cart', 'wishlist', 'account', 
-            'contact', 'faq', 'shipping', 'returns', 
+            'home', 'shop', 'cart', 'wishlist', 'account',
+            'contact', 'faq', 'shipping', 'returns',
             'privacy', 'terms', 'blog', 'find-store'
         ];
 
@@ -170,8 +196,8 @@ app.get('/sitemap.xml', async (req, res) => {
     }
 });
 
-// API endpoint to send the Telegram alert, now secured with a secret key
-app.post('/api/send-telegram-alert', requireSecretKey, async (req, res) => {
+// API endpoint to send the Telegram alert, now secured with Firebase authentication
+app.post('/api/send-telegram-alert', requireFirebaseAuth, validateTelegramAlert, async (req, res) => {
     if (!BOT_TOKEN || !CHAT_ID) {
         console.error('Telegram credentials are not configured in the .env file.');
         return res.status(500).json({ success: false, message: 'Server is not configured for notifications.' });
@@ -182,7 +208,7 @@ app.post('/api/send-telegram-alert', requireSecretKey, async (req, res) => {
     if (!order) {
         return res.status(400).json({ success: false, message: 'Order data is missing.' });
     }
-    
+
     // Construct a detailed message
     const message = `
 📦 *New Order Received!*
@@ -215,12 +241,12 @@ Please verify the payment in the admin panel.
 });
 
 // New endpoint to securely resolve mobile number to email
-app.post('/api/get-email-for-mobile', requireSecretKey, async (req, res) => {
+app.post('/api/get-email-for-mobile', requireFirebaseAuth, validateMobileNumber, async (req, res) => {
     if (!db) {
         console.error('Attempted to access /api/get-email-for-mobile but Firestore is not initialized.');
         return res.status(503).json({ success: false, message: 'Database service is not available.' });
     }
-    
+
     const { mobile } = req.body;
     if (!mobile) {
         return res.status(400).json({ success: false, message: 'Mobile number is missing.' });
@@ -248,7 +274,7 @@ app.post('/api/get-email-for-mobile', requireSecretKey, async (req, res) => {
 
 
 // Secure proxy endpoint for Gemini API
-app.post('/api/generate-content', async (req, res) => {
+app.post('/api/generate-content', validateGenerateContent, async (req, res) => {
     if (!process.env.GEMINI_API_KEY) {
         console.error('Gemini API key (GEMINI_API_KEY) is not configured in the .env file.');
         return res.status(500).json({ success: false, message: 'Server is not configured for AI features.' });
@@ -266,7 +292,7 @@ app.post('/api/generate-content', async (req, res) => {
     while (attempt < maxRetries) {
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-            
+
             const genAIResponse = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: prompt,
@@ -280,7 +306,7 @@ app.post('/api/generate-content', async (req, res) => {
             }
 
             let text = genAIResponse.text;
-            
+
             // Clean the response text to ensure it's valid JSON if it's wrapped in markdown
             if (text.startsWith('```json')) {
                 text = text.replace(/```json\n?/, '').replace(/```$/, '');
@@ -291,7 +317,7 @@ app.post('/api/generate-content', async (req, res) => {
 
         } catch (error) {
             attempt++;
-            
+
             const isRetryable = error.message && (error.message.includes('UNAVAILABLE') || error.message.includes('overloaded') || error.message.includes('503'));
 
             if (isRetryable && attempt < maxRetries) {
@@ -313,7 +339,7 @@ app.listen(PORT, () => {
     if (!BOT_TOKEN || !CHAT_ID) {
         console.warn('⚠️ WARNING: Telegram credentials (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID) are missing. Notifications will not work. Please create a .env file in the /backend directory.');
     }
-     if (!process.env.GEMINI_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
         console.warn('⚠️ WARNING: Gemini API key (GEMINI_API_KEY) is missing. AI features will not work. Please add it to your .env file in the /backend directory.');
     }
     // We already log warnings inside the try/catch block for DB init

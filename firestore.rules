@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Helper function to check if user is seller
+    function isSeller() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
+    }
+    
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Products collection
+    match /products/{productId} {
+      // Anyone can read approved products
+      allow read: if resource.data.approvalStatus == 'approved' || isAdmin();
+      
+      // Only admin and sellers can create products
+      allow create: if isAdmin() || isSeller();
+      
+      // Only admin or product owner can update/delete
+      allow update, delete: if isAdmin() || 
+                               (isSeller() && resource.data.sellerId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.id);
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Users can only read their own data, admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can only update their own data
+      allow update: if isOwner(userId);
+      
+      // Only allow creation during signup (handled by Firebase Auth)
+      allow create: if isAuthenticated();
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+    
+    // Carts collection
+    match /carts/{userId} {
+      // Users can only access their own cart
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Wishlists collection
+    match /wishlists/{userId} {
+      // Users can only access their own wishlist
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Orders collection
+    match /orders/{orderId} {
+      // Users can read their own orders, admins and sellers can read all
+      allow read: if isAuthenticated() && 
+                     (resource.data.userId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.id || 
+                      isAdmin() || 
+                      isSeller());
+      
+      // Only authenticated users can create orders
+      allow create: if isAuthenticated();
+      
+      // Only admins and sellers can update orders (for status changes)
+      allow update: if isAdmin() || isSeller();
+      
+      // Only admins can delete orders
+      allow delete: if isAdmin();
+    }
+    
+    // Stores collection
+    match /stores/{storeId} {
+      // Anyone can read stores
+      allow read: if true;
+      
+      // Only admins can modify stores
+      allow write: if isAdmin();
+    }
+    
+    // Config collection (homepage banners, etc.)
+    match /config/{configId} {
+      // Anyone can read config
+      allow read: if true;
+      
+      // Only admins can modify config
+      allow write: if isAdmin();
+    }
+    
+    // Coupons collection
+    match /coupons/{couponCode} {
+      // Anyone can read active coupons
+      allow read: if true;
+      
+      // Only admins can modify coupons
+      allow write: if isAdmin();
+    }
+    
+    // Metadata collection (for database seeding flag, etc.)
+    match /metadata/{docId} {
+      // Anyone can read metadata
+      allow read: if true;
+      
+      // Only admins can write metadata
+      allow write: if isAdmin();
+    }
+  }
+}
