@@ -4,8 +4,8 @@ import type { User } from '../types';
 
 interface AuthProps {
     onClose: () => void;
-    onAuthSuccess: (user: User) => void;
-    onSignup: (name: string, email: string, pass: string, mobile: string, marketingConsent: boolean) => void;
+    onAuthSuccess: (user: User) => void | Promise<void>;
+    onSignup: (name: string, email: string, pass: string, mobile: string, marketingConsent: boolean) => void | Promise<void>;
 }
 
 type AuthMode = 'login' | 'signup' | 'loginOtp' | 'forgotPassword';
@@ -101,25 +101,37 @@ const Auth: React.FC<AuthProps> = ({ onClose, onAuthSuccess, onSignup }) => {
         setIsLoading(false);
     };
 
-    const handleSignupSubmit = (e: React.FormEvent) => {
+    const handleSignupSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        onSignup(name, email, password, mobile, marketingConsent);
-        setIsLoading(false);
+        setError(null);
+        try {
+            await Promise.resolve(onSignup(name, email, password, mobile, marketingConsent));
+        } catch (err) {
+            setError((err as Error).message);
+        } finally {
+            setIsLoading(false);
+        }
     }
 
-    const handleOtpSubmit = (e: React.FormEvent) => {
+    const handleOtpSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setIsLoading(true);
 
-        if (otp === '123456' && userForOtp.current) {
-            api.finalizeLogin(userForOtp.current);
-            onAuthSuccess(userForOtp.current);
-        } else {
+        if (otp !== '123456' || !userForOtp.current) {
             setError('Invalid OTP. Please try again.');
+            setIsLoading(false);
+            return;
         }
-        setIsLoading(false);
+
+        try {
+            await Promise.resolve(api.finalizeLogin(userForOtp.current));
+            await Promise.resolve(onAuthSuccess(userForOtp.current));
+        } catch (err) {
+            setError((err as Error).message);
+            setIsLoading(false);
+        }
     };
 
     const handleForgotSubmit = async (e: React.FormEvent) => {
@@ -140,7 +152,7 @@ const Auth: React.FC<AuthProps> = ({ onClose, onAuthSuccess, onSignup }) => {
         setError(null);
         try {
             const user = await api.signInWithProvider(provider);
-            onAuthSuccess(user);
+            await Promise.resolve(onAuthSuccess(user));
         } catch (err) {
             setError((err as Error).message || "Social login failed. Please try again.");
             setIsLoading(false); // Only stop loading on error, as success unmounts the component

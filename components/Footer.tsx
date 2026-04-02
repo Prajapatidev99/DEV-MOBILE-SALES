@@ -13,12 +13,9 @@ const SocialIcon: React.FC<{ href: string; label: string; icon: React.ReactNode;
         target="_blank"
         rel="noopener noreferrer"
         aria-label={label}
-        className={`group relative w-12 h-12 bg-gray-600 rounded-full flex items-center justify-center text-gray-300 transition-all duration-300 ${hoverBg} hover:text-white`}
+        className={`w-12 h-12 bg-gray-600 rounded-full flex items-center justify-center text-gray-300 transition-all duration-300 ${hoverBg} hover:text-white`}
     >
         {icon}
-        <span className={`absolute -top-10 scale-0 group-hover:scale-100 transition-transform duration-300 ${hoverBg.replace('hover:', '')} text-white text-xs px-2 py-1 rounded-md`}>
-            {label}
-        </span>
     </a>
 );
 

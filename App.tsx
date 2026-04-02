@@ -700,8 +700,9 @@ const App: React.FC = () => {
   };
 
   const handleAuthSuccess = async (user: User) => {
-    // The subscription listener in useEffect will handle data loading.
-    // We just handle UI feedback here.
+    // Update the UI immediately after OTP/social login completes instead of
+    // waiting for the background auth subscription to fire.
+    setCurrentUser(user);
     setAuthModalOpen(false);
     addToast(`Welcome back, ${user.name}!`);
 
@@ -725,8 +726,8 @@ const App: React.FC = () => {
 
   const handleSignup = async (name: string, email: string, pass: string, mobile: string, marketingConsent: boolean) => {
      try {
-      await api.signup(name, email, pass, mobile, marketingConsent);
-      // Auth listener handles the rest
+      const newUser = await api.signup(name, email, pass, mobile, marketingConsent);
+      setCurrentUser(newUser);
       setAuthModalOpen(false);
       addToast(`Account created successfully! Welcome, ${name}!`);
     } catch (error) {
